@@ -64,10 +64,12 @@ atwikiのPukiWikiライクモードで使用する、FGOサーヴァント用デ
 *FGO データオートフィル
 
 &html(<div id="fgo-data-autofill"></div>)
-#include_js(https://cdn.jsdelivr.net/gh/siroihuman/FGO_data_autofill@main/FGO_DataAutofill_atwiki.js)
+#include_js(https://cdn.jsdelivr.net/gh/siroihuman/FGO_data_autofill@7accc62e22bdbd80e7b16463b2b4198d6f142cd7/FGO_DataAutofill_atwiki.js)
 ```
 
-リポジトリには最新版だけを置き、バージョン別ディレクトリは使用しません。設置URLは常に`main`の最新版を読み込みます。
+`@main`を指定すると、jsDelivrのブランチキャッシュによって更新前のJavaScriptがしばらく配信される場合があります。そのため、現在の最新版であるver 2.1.0の確定コミットを直接指定しています。
+
+リポジトリには最新版のソースだけを置きます。今後バージョンを更新した場合は、`atwiki_page_code.txt`とこの設置URLも新しい確定コミットへ更新します。
 
 ## 使用方法
 
@@ -101,6 +103,7 @@ node tests/FGO_DataAutofill.test.js
 - 初期画面から固有名詞を使った入力例を削除
 - クラススキルと保有スキルへ「宝具」チェックを追加
 - 強化後スキルの「宝具」チェックに対応
+- jsDelivrのブランチキャッシュ対策として設置URLを確定コミット指定へ変更
 
 ### ver 2.0.0
 
