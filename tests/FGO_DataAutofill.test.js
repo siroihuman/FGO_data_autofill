@@ -6,6 +6,20 @@ require('../v1.0.0/FGO_DataAutofill_atwiki.js');
 const core = global.FGODataAutofillCore;
 assert(core, 'core should be exposed');
 
+const SOURCE_FIXTURE = `*No.
+
+//─┤クラススキル├────────────────────────
+
+**クラススキル
+|BGCOLOR(#e6e6fa):CENTER:45|BGCOLOR(#f5fffa):LEFT:1000|c
+|&ref(0.png,icon/skill,height=48)|BGCOLOR(#e6e6fa):CENTER:&font(b,110%){【スキル名】}&ref(.png,icon/class,title=セイバー,height=25,width=25)|
+|~||
+
+//─┤保有スキル├─────────────────────────
+
+**保有スキル
+***Skill1：`;
+
 assert.strictEqual(core.inferSkillIcon('陣地作成 B+'), '陣地作成.png');
 assert.strictEqual(core.inferSkillIcon('領域外の生命 EX'), '領域外の生命.png');
 
@@ -21,7 +35,7 @@ const normalGroups = [{
   }]
 }];
 
-const normal = core.replaceClassSkillSection(core.DEFAULT_TEMPLATE, normalGroups);
+const normal = core.replaceClassSkillSection(SOURCE_FIXTURE, normalGroups);
 assert.strictEqual(normal.replaced, true);
 assert(normal.text.includes('|&ref(陣地作成.png,icon/skill,height=48)|BGCOLOR(#e6e6fa):CENTER:&font(b,110%){陣地作成 B+}&ref(術金.png,icon/class,title=キャスター,height=25,width=25)|'));
 assert(normal.text.includes('|~|魔術師として、自らに有利な陣地を作り上げる。&br()“工房”と“祭壇”の形成が可能。|'));
@@ -39,7 +53,7 @@ const specialGroups = [
     skills: [{ name: '領域外の生命 EX', icon: '領域外の生命.png', flavor: '&font(b,110%){特殊記法}&br()', rawWiki: true }]
   }
 ];
-const special = core.replaceClassSkillSection(core.DEFAULT_TEMPLATE, specialGroups);
+const special = core.replaceClassSkillSection(SOURCE_FIXTURE, specialGroups);
 assert(special.text.includes('***〔通常〕'));
 assert(special.text.includes('***〔特殊形態〕'));
 assert(special.text.includes('title=フォーリナー'));
