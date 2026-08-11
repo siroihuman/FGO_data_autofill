@@ -57,6 +57,23 @@ atwikiのPukiWikiライクモードで使用する、FGOサーヴァント用デ
 
 すでに`156cm`や`39kg`のように単位を入力している場合は、二重に追加しません。空欄の場合もテンプレートどおり`cm` / `kg`は残します。
 
+## 保有スキルの強化後region
+
+保有スキルの強化後regionは、必ず対応するスキルの直後へ配置します。
+
+```text
+Skill1
+Skill1の強化後region
+Skill2
+Skill2の強化後region
+Skill3
+Skill3の強化後region
+```
+
+強化後データを有効にしていない場合は、元コードにある対応番号のコメントアウト済みregionをそのまま保持して、そのSkill直後へ配置します。元コードに対応regionが無い場合は、標準のコメントアウト済みregionを自動生成します。
+
+強化後データを有効にした場合は、そのSkill直後へ通常の`#region(close,強化後)`として出力します。
+
 ## スキルの宝具チェック
 
 クラススキル、保有スキル、強化後スキルで「宝具」を有効にすると、解説の先頭へ次の記法を追加します。
@@ -75,10 +92,10 @@ atwikiのPukiWikiライクモードで使用する、FGOサーヴァント用デ
 *FGO データオートフィル
 
 &html(<div id="fgo-data-autofill"></div>)
-#include_js(https://cdn.jsdelivr.net/gh/siroihuman/FGO_data_autofill@5be5af31978d6785196b3e959fc268d8a721064c/FGO_DataAutofill_atwiki.js)
+#include_js(https://cdn.jsdelivr.net/gh/siroihuman/FGO_data_autofill@f6b0e0ef26eb70a047ecdfe2b3e5cbea5ff3d976/FGO_DataAutofill_atwiki.js)
 ```
 
-`@main`を指定すると、jsDelivrのブランチキャッシュによって更新前のJavaScriptがしばらく配信される場合があります。そのため、現在の最新版であるver 2.1.1を含む確定コミットを直接指定しています。
+`@main`を指定すると、jsDelivrのブランチキャッシュによって更新前のJavaScriptがしばらく配信される場合があります。そのため、現在の最新版であるver 2.1.2を含む確定コミットを直接指定しています。
 
 リポジトリには最新版のソースだけを置きます。今後バージョンを更新した場合は、`atwiki_page_code.txt`とこの設置URLも新しい確定コミットへ更新します。
 
@@ -105,6 +122,16 @@ node tests/FGO_DataAutofill.test.js
 ```
 
 ## 更新履歴
+
+### ver 2.1.2
+
+- 保有スキルの強化後regionを各Skill直後へ必ず配置するよう変更
+- 強化後未使用時は、元コードの番号付きコメントアウトregionを同じSkill直後へ保持
+- 元コードにregionが無い場合は標準のコメントアウトregionを自動生成
+- 強化後使用時は対応Skill直後へ通常regionを生成
+- Skill3後ろへ複数の強化後regionが集約される問題を修正
+- 新規ページ生成時の基本情報テーブル列定義をテンプレートと一致するよう修正
+- region配置と対象外記述保持の回帰テストを追加
 
 ### ver 2.1.1
 
