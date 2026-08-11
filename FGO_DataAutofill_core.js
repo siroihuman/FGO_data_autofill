@@ -1,9 +1,9 @@
 (function () {
   'use strict';
 
-  const VERSION = '2.1.0';
+  const VERSION = '2.1.1';
   const ROOT_ID = 'fgo-data-autofill';
-  const STATE_KEY = 'fgo-data-autofill:v3:';
+  const STATE_KEY = 'fgo-data-autofill:v4:';
 
   const CLASS_DATA = {
     'セイバー': '剣', 'アーチャー': '弓', 'ランサー': '槍',
@@ -14,16 +14,9 @@
     'プリテンダー': '詐', 'ビースト': '獣'
   };
 
-  const RARITY_ICON_SUFFIX = {
-    1: '銅', 2: '銅', 3: '銀', 4: '金', 5: '金'
-  };
-
+  const RARITY_ICON_SUFFIX = { 1: '銅', 2: '銅', 3: '銀', 4: '金', 5: '金' };
   const SKILL_NOBLE_PREFIX = '&font(b,110%){種別：対宝具　レンジ：　最大補足：人}&br()&font(b,105%){“”}&br()';
-
-  const NP_COLORS = {
-    Buster: '#F88', Arts: '#9AF', Quick: '#AF9'
-  };
-
+  const NP_COLORS = { Buster: '#F88', Arts: '#9AF', Quick: '#AF9' };
   const SKILL_MASTER = [];
 
   const clean = (value) => String(value == null ? '' : value).replace(/\r\n?/g, '\n').trim();
@@ -84,6 +77,12 @@
     return /^\[\[.*\]\]$/.test(text) ? text : `[[${text}]]`;
   }
 
+  function withUnit(value, unit) {
+    const text = clean(value);
+    if (!text) return unit;
+    return new RegExp(`${escapeRegExp(unit)}$`, 'i').test(text) ? text : `${text}${unit}`;
+  }
+
   function rankBars(rank) {
     const text = clean(rank).toUpperCase();
     let count = 0;
@@ -141,9 +140,10 @@
   }
 
   function normalizeState(value) {
-    const state = Object.assign(defaultState(), value && typeof value === 'object' ? value : {});
-    state.basic = Object.assign(defaultState().basic, state.basic || {});
-    state.parameters = Object.assign(defaultState().parameters, state.parameters || {});
+    const defaults = defaultState();
+    const state = Object.assign(defaults, value && typeof value === 'object' ? value : {});
+    state.basic = Object.assign(defaults.basic, state.basic || {});
+    state.parameters = Object.assign(defaults.parameters, state.parameters || {});
     state.classGroups = Array.isArray(state.classGroups) && state.classGroups.length
       ? state.classGroups.map((group) => {
           const normalized = Object.assign(newClassGroup(), group || {});
@@ -167,7 +167,7 @@
           return normalized;
         })
       : [newNoblePhantasm()];
-    state.weapon = Object.assign(defaultState().weapon, state.weapon || {});
+    state.weapon = Object.assign(defaults.weapon, state.weapon || {});
     state.basic.rarity = String(state.basic.rarity || '5');
     return syncClassData(state);
   }
@@ -273,6 +273,33 @@
     return text.replace(pattern, replacement);
   }
 
+  function isManagedSectionLine(heading, line) {
+    const text = line.trim();
+    if (!text || text.startsWith('//')) return false;
+    if (text.startsWith('|')) return true;
+    if (heading === 'クラススキル') return /^\*\*\*/.test(text);
+    if (heading === '保有スキル') return /^\*\*\*Skill/.test(text) || /^#(?:region|endregion)\b/.test(text);
+    if (heading === '宝具') return /^\*\*\*/.test(text) || /^#(?:region|endregion|br)\b/.test(text);
+    return false;
+  }
+
+  function mergeSectionBody(originalBody, generatedBody, heading) {
+    const lines = originalBody.split('\n');
+    const kept = [];
+    let insertAt = null;
+    lines.forEach((line) => {
+      if (isManagedSectionLine(heading, line)) {
+        if (insertAt === null) insertAt = kept.length;
+        return;
+      }
+      kept.push(line);
+    });
+    if (insertAt === null) insertAt = 0;
+    const generated = generatedBody ? generatedBody.split('\n') : [];
+    kept.splice(insertAt, 0, ...generated);
+    return kept.join('\n');
+  }
+
   function replaceSectionBody(text, heading, body, report) {
     const pattern = new RegExp(`^\\*\\*${escapeRegExp(heading)}[^\\n]*$`, 'm');
     const match = pattern.exec(text);
@@ -289,9 +316,10 @@
     if (divider) relativeEnd = Math.min(relativeEnd, divider.index);
     if (nextHeading) relativeEnd = Math.min(relativeEnd, nextHeading.index);
     const bodyEnd = bodyStart + relativeEnd;
-    const suffix = text.slice(bodyEnd).replace(/^\n+/, '');
+    const originalBody = text.slice(bodyStart, bodyEnd);
+    const mergedBody = mergeSectionBody(originalBody, body, heading);
     report.replaced.push(`${heading}欄`);
-    return `${text.slice(0, headingEnd)}\n${body}${suffix ? `\n\n${suffix}` : ''}`;
+    return `${text.slice(0, bodyStart)}${mergedBody}${text.slice(bodyEnd)}`;
   }
 
   function buildFreshPage(state) {
@@ -313,7 +341,7 @@
       '|BGCOLOR(#98fb98):CENTER:46|BGCOLOR(#87ceeb):CENTER:46|BGCOLOR(#ffb6c1):CENTER:46|BGCOLOR(#e6e6fa):CENTER:58|BGCOLOR(#f5fffa):CENTER:50|BGCOLOR(#f5fffa):CENTER:50|BGCOLOR(#e6e6fa):CENTER:20|BGCOLOR(#f5fffa):CENTER:50|BGCOLOR(#f5fffa):CENTER:50|BGCOLOR(#f5fffa):CENTER:50|BGCOLOR(#f5fffa):CENTER:50|BGCOLOR(#f5fffa):CENTER:100|BGCOLOR(#f5fffa):CENTER:50|BGCOLOR(#f5fffa):CENTER:50|BGCOLOR(#f5fffa):CENTER:100|c',
       `|>|>|>|>|>|>|>|>|>|>|>|>|>|>|BGCOLOR(#17184b):COLOR(white):No.${clean(basic.no)}|`,
       `|>|>|BGCOLOR(#e6e6fa):真名|>|>|>|>|>|>|>|>|>|>|>|${wikiTrueName(basic.trueName, basic.trueNameRawWiki)}|`,
-      `|>|>|BGCOLOR(#e6e6fa):Class|>|>|&ref(${classIcon},icon/class,width=30)|>|BGCOLOR(#e6e6fa):性別|${clean(basic.gender)}|>|BGCOLOR(#e6e6fa):身長|${clean(basic.height)}|>|BGCOLOR(#e6e6fa):体重|${clean(basic.weight)}|`,
+      `|>|>|BGCOLOR(#e6e6fa):Class|>|>|&ref(${classIcon},icon/class,width=30)|>|BGCOLOR(#e6e6fa):性別|${clean(basic.gender)}|>|BGCOLOR(#e6e6fa):身長|${withUnit(basic.height, 'cm')}|>|BGCOLOR(#e6e6fa):体重|${withUnit(basic.weight, 'kg')}|`,
       '**パラメーター',
       '|BGCOLOR(#000):COLOR(#fff):CENTER:60|BGCOLOR(#683f36):CENTER:20|BGCOLOR(#683f36):CENTER:20|BGCOLOR(#683f36):CENTER:20|BGCOLOR(#683f36):CENTER:20|BGCOLOR(#683f36):CENTER:20|BGCOLOR(#000):COLOR(#fff):CENTER:25|BGCOLOR(#000):0|BGCOLOR(#000):COLOR(#fff):CENTER:60|BGCOLOR(#683f36):CENTER:20|BGCOLOR(#683f36):CENTER:20|BGCOLOR(#683f36):CENTER:20|BGCOLOR(#683f36):CENTER:20|BGCOLOR(#683f36):CENTER:20|BGCOLOR(#000):COLOR(#fff):CENTER:25|c',
       buildParameterRow('筋力', params.strength, ' ', '耐久', params.endurance),
@@ -360,7 +388,7 @@
     text = replaceLine(text, /^\|>\|>\|BGCOLOR\(#e6e6fa\):真名\|[^\n]*$/m,
       `|>|>|BGCOLOR(#e6e6fa):真名|>|>|>|>|>|>|>|>|>|>|>|${wikiTrueName(basic.trueName, basic.trueNameRawWiki)}|`, '真名', report);
     text = replaceLine(text, /^\|>\|>\|BGCOLOR\(#e6e6fa\):Class\|[^\n]*$/m,
-      `|>|>|BGCOLOR(#e6e6fa):Class|>|>|&ref(${classIcon},icon/class,width=30)|>|BGCOLOR(#e6e6fa):性別|${clean(basic.gender)}|>|BGCOLOR(#e6e6fa):身長|${clean(basic.height)}|>|BGCOLOR(#e6e6fa):体重|${clean(basic.weight)}|`,
+      `|>|>|BGCOLOR(#e6e6fa):Class|>|>|&ref(${classIcon},icon/class,width=30)|>|BGCOLOR(#e6e6fa):性別|${clean(basic.gender)}|>|BGCOLOR(#e6e6fa):身長|${withUnit(basic.height, 'cm')}|>|BGCOLOR(#e6e6fa):体重|${withUnit(basic.weight, 'kg')}|`,
       'Class・性別・身長・体重', report);
 
     text = replaceLine(text, /^\|筋力\|[^\n]*\|耐久\|[^\n]*$/m,
@@ -380,8 +408,8 @@
 
   const core = {
     VERSION, CLASS_DATA, RARITY_ICON_SUFFIX, NP_COLORS, SKILL_MASTER, SKILL_NOBLE_PREFIX,
-    defaultState, normalizeState, inferSkillIcon, classIconSuffix, getClassIcon, syncClassData, skillDescription, rankBars, buildParameterRow,
-    buildClassSkillBlock, buildClassSkills, buildOwnedSkills, buildNoblePhantasms,
+    defaultState, normalizeState, inferSkillIcon, classIconSuffix, getClassIcon, syncClassData, skillDescription, withUnit,
+    rankBars, buildParameterRow, buildClassSkillBlock, buildClassSkills, buildOwnedSkills, buildNoblePhantasms,
     buildWeapon, buildFreshPage, applyAll
   };
 
