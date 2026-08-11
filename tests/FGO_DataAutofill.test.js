@@ -5,11 +5,15 @@ require('../FGO_DataAutofill_core.js');
 require('../FGO_DataAutofill_ui.js');
 const core = global.FGODataAutofillCore;
 assert(core, 'core should be exposed');
-assert.strictEqual(core.VERSION, '2.1.0');
+assert.strictEqual(core.VERSION, '2.1.1');
+assert.strictEqual(core.withUnit('156', 'cm'), '156cm');
+assert.strictEqual(core.withUnit('156cm', 'cm'), '156cm');
+assert.strictEqual(core.withUnit('', 'cm'), 'cm');
+assert.strictEqual(core.withUnit('39', 'kg'), '39kg');
 
 const root = { innerHTML: '' };
 global.FGODataAutofillUI.render(root, core.defaultState());
-assert(root.innerHTML.includes('ver 2.1.0'));
+assert(root.innerHTML.includes('ver 2.1.1'));
 assert(root.innerHTML.includes('レアリティ'));
 assert(root.innerHTML.includes('data-basic-class'));
 assert(!root.innerHTML.includes('クラス表記'));
@@ -36,6 +40,7 @@ assert.strictEqual(core.getClassIcon('', 5), '0.png');
 assert.strictEqual(core.inferSkillIcon('復讐者 B'), '復讐者.png');
 
 const source = `*No.
+// ページ先頭の独自コメントを保持
 
 //─┤基本情報├──────────────────────────
 
@@ -48,32 +53,45 @@ const source = `*No.
 |筋力| |耐久|
 |敏捷|~|魔力|
 |幸運|~|宝具|
+// パラメーターの独自コメントを保持
 
 //─┤クラススキル├────────────────────────
 
 **クラススキル
+// クラススキルのコメントを保持
 |old|
+独自クラススキル注記を保持
+//|コメントアウト済みクラススキルテンプレート|
 
 //─┤保有スキル├─────────────────────────
 
 **保有スキル
 ***Skill1：
 |old|
+// 強化後テンプレートを保持
+//#region(close,強化後)
+//|コメントアウト済み強化後テーブル|
+//#endregion
+独自保有スキル注記を保持
 
 //─┤宝具├────────────────────────────
 
 **宝具
+////真名隠し用コメントを保持
 |old|
+独自宝具注記を保持
 
 //─┤武器├────────────────────────────
 
 **武器
-|old|`;
+|old|
+// 武器コメントを保持
+ページ末尾の独自記述を保持`;
 
 const state = core.defaultState();
 Object.assign(state.basic, {
   no: '001', trueName: 'テストサーヴァント', rarity: '3', className: 'アヴェンジャー',
-  gender: '女性', height: '150cm', weight: '40kg'
+  gender: '女性', height: '150', weight: '40'
 });
 Object.assign(state.parameters, { strength: 'E', endurance: 'C', agility: 'D', magic: 'A', luck: 'D', noble: 'A+' });
 state.classGroups = [{
@@ -105,6 +123,8 @@ assert(result.text.startsWith('*No.001'));
 assert(result.text.includes('BGCOLOR(#17184b):COLOR(white):No.001'));
 assert(result.text.includes('[[テストサーヴァント]]'));
 assert(result.text.includes('&ref(讐銀.png,icon/class,width=30)'));
+assert(result.text.includes('身長|150cm|'));
+assert(result.text.includes('体重|40kg|'));
 assert(result.text.includes('&font(b,110%){復讐者 B}&ref(讐銀.png,icon/class,title=アヴェンジャー'));
 assert(result.text.includes(`|~|${core.SKILL_NOBLE_PREFIX}一行目。&br()二行目。|`));
 assert(result.text.includes(`|~|${core.SKILL_NOBLE_PREFIX}通常解説。|`));
@@ -118,6 +138,22 @@ assert(result.text.includes('レンジ：1～50　最大補足：500人'));
 assert(result.text.includes('&font(b,110%){【─】}'));
 assert(result.text.includes('//─┤保有スキル├─────────────────────────'));
 assert(!result.text.includes('|old|'));
+for (const preserved of [
+  '// ページ先頭の独自コメントを保持',
+  '// パラメーターの独自コメントを保持',
+  '// クラススキルのコメントを保持',
+  '独自クラススキル注記を保持',
+  '//|コメントアウト済みクラススキルテンプレート|',
+  '// 強化後テンプレートを保持',
+  '//#region(close,強化後)',
+  '//|コメントアウト済み強化後テーブル|',
+  '//#endregion',
+  '独自保有スキル注記を保持',
+  '////真名隠し用コメントを保持',
+  '独自宝具注記を保持',
+  '// 武器コメントを保持',
+  'ページ末尾の独自記述を保持'
+]) assert(result.text.includes(preserved), preserved);
 assert.deepStrictEqual(result.report.missing, []);
 
 const normalized = core.normalizeState(state);
@@ -128,6 +164,8 @@ assert(normalized.classGroups.every((group) => group.classIcon === '讐銀.png')
 const fresh = core.applyAll('', state);
 assert.strictEqual(fresh.fresh, true);
 assert(fresh.text.includes('*No.001'));
+assert(fresh.text.includes('身長|150cm|'));
+assert(fresh.text.includes('体重|40kg|'));
 assert(fresh.text.includes('**クラススキル'));
 assert(fresh.text.includes('**保有スキル'));
 assert(fresh.text.includes('**宝具'));
