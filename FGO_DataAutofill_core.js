@@ -1,9 +1,9 @@
 (function () {
   'use strict';
 
-  const VERSION = '2.1.1';
+  const VERSION = '2.1.2';
   const ROOT_ID = 'fgo-data-autofill';
-  const STATE_KEY = 'fgo-data-autofill:v4:';
+  const STATE_KEY = 'fgo-data-autofill:v5:';
 
   const CLASS_DATA = {
     'セイバー': '剣', 'アーチャー': '弓', 'ランサー': '槍',
@@ -13,7 +13,6 @@
     'アルターエゴ': '分', 'フォーリナー': '降',
     'プリテンダー': '詐', 'ビースト': '獣'
   };
-
   const RARITY_ICON_SUFFIX = { 1: '銅', 2: '銅', 3: '銀', 4: '金', 5: '金' };
   const SKILL_NOBLE_PREFIX = '&font(b,110%){種別：対宝具　レンジ：　最大補足：人}&br()&font(b,105%){“”}&br()';
   const NP_COLORS = { Buster: '#F88', Arts: '#9AF', Quick: '#AF9' };
@@ -31,16 +30,13 @@
     if (!text) return '0.png';
     return /\.[a-z0-9]+$/i.test(text) ? text : `${text}.png`;
   }
-
   function classIconSuffix(rarity) {
     return RARITY_ICON_SUFFIX[Number(rarity)] || '金';
   }
-
   function getClassIcon(className, rarity) {
     const code = CLASS_DATA[clean(className)];
     return code ? `${code}${classIconSuffix(rarity)}.png` : '0.png';
   }
-
   function syncClassData(state) {
     const className = clean(state.basic.className);
     const classIcon = getClassIcon(className, state.basic.rarity);
@@ -51,7 +47,6 @@
     });
     return state;
   }
-
   function inferSkillIcon(name) {
     const base = clean(name)
       .replace(/[【】]/g, '')
@@ -59,30 +54,25 @@
       .trim();
     return base ? `${base}.png` : '0.png';
   }
-
   function wikiText(value, rawWiki) {
     const text = clean(value);
     return rawWiki ? text : text.replace(/\n/g, '&br()');
   }
-
   function skillDescription(data) {
     const description = wikiText(data.description, data.rawWiki);
     return data.isNoblePhantasm ? `${SKILL_NOBLE_PREFIX}${description}` : description;
   }
-
   function wikiTrueName(value, rawWiki) {
     const text = clean(value);
     if (rawWiki) return text;
     if (!text) return '[[]]';
     return /^\[\[.*\]\]$/.test(text) ? text : `[[${text}]]`;
   }
-
   function withUnit(value, unit) {
     const text = clean(value);
     if (!text) return unit;
     return new RegExp(`${escapeRegExp(unit)}$`, 'i').test(text) ? text : `${text}${unit}`;
   }
-
   function rankBars(rank) {
     const text = clean(rank).toUpperCase();
     let count = 0;
@@ -93,20 +83,20 @@
     else if (text.startsWith('E')) count = 1;
     return Array.from({ length: 5 }, (_, index) => index < count ? 'BGCOLOR(#ea5506):' : '');
   }
-
   function buildParameterRow(leftLabel, leftRank, separator, rightLabel, rightRank) {
-    const cells = [leftLabel].concat(rankBars(leftRank), [clean(leftRank), separator, rightLabel], rankBars(rightRank), [clean(rightRank)]);
+    const cells = [leftLabel].concat(
+      rankBars(leftRank), [clean(leftRank), separator, rightLabel],
+      rankBars(rightRank), [clean(rightRank)]
+    );
     return `|${cells.join('|')}|`;
   }
 
   function newClassSkill(data) {
     return Object.assign({ name: '', icon: '', description: '', rawWiki: false, rawBlock: '', isNoblePhantasm: false }, data || {});
   }
-
   function newClassGroup(data) {
     return Object.assign({ heading: '', className: '', classIcon: '0.png', skills: [newClassSkill()] }, data || {});
   }
-
   function newOwnedSkill(index, data) {
     return Object.assign({
       label: `Skill${index + 1}`, name: '', icon: '0.png', description: '', rawWiki: false, rawBlock: '', isNoblePhantasm: false,
@@ -114,16 +104,14 @@
       enhanced: { name: '', icon: '0.png', description: '', rawWiki: false, rawBlock: '', isNoblePhantasm: false }
     }, data || {});
   }
-
   function newNoblePhantasm(data) {
     return Object.assign({
       heading: '', reading: '', name: '', rank: '', type: '対宝具', card: 'Buster',
       range: '', maxTargets: '', description: '', rawWiki: false, rawBlock: '',
       enhancedEnabled: false,
-      enhanced: { reading: '', name: '', rank: '', type: '対宝具', card: 'Buster', range: '', maxTargets: '', description: '', rawWiki: false, rawBlock: '' }
+      enhanced: { heading: '', reading: '', name: '', rank: '', type: '対宝具', card: 'Buster', range: '', maxTargets: '', description: '', rawWiki: false, rawBlock: '' }
     }, data || {});
   }
-
   function defaultState() {
     return {
       basic: {
@@ -138,7 +126,6 @@
       sourceCode: '', outputCode: '', message: '', report: null
     };
   }
-
   function normalizeState(value) {
     const defaults = defaultState();
     const state = Object.assign(defaults, value && typeof value === 'object' ? value : {});
@@ -184,18 +171,18 @@
       `|~|${skillDescription(skill)}|`
     ].join('\n');
   }
-
   function buildClassSkills(groups) {
     const output = [];
     (groups || []).forEach((group) => {
-      const skills = (group.skills || []).filter((skill) => clean(skill.name) || clean(skill.icon) || clean(skill.description) || clean(skill.rawBlock));
+      const skills = (group.skills || []).filter((skill) =>
+        clean(skill.name) || clean(skill.icon) || clean(skill.description) || clean(skill.rawBlock)
+      );
       if (!skills.length) return;
       if (clean(group.heading)) output.push(`***${clean(group.heading)}`);
       skills.forEach((skill) => output.push(buildClassSkillBlock(skill, group)));
     });
     return output.join('\n\n');
   }
-
   function buildOwnedSkillTable(data) {
     if (clean(data.rawBlock)) return clean(data.rawBlock);
     const icon = ensurePng(data.icon, inferSkillIcon(data.name));
@@ -205,9 +192,20 @@
       `|~|${skillDescription(data)}|`
     ].join('\n');
   }
-
-  function buildOwnedSkills(skills) {
+  function commentLines(text) {
+    return String(text).split('\n').map((line) => `//${line}`).join('\n');
+  }
+  function buildDisabledOwnedEnhancement(label) {
+    return [
+      '//#region(close,強化後)',
+      `//***${label}[強化後]：`,
+      commentLines(buildOwnedSkillTable({ name: '', icon: '0.png', description: '', rawWiki: false, rawBlock: '', isNoblePhantasm: false })),
+      '//#endregion'
+    ].join('\n');
+  }
+  function buildOwnedSkills(skills, disabledTemplates) {
     const output = [];
+    const templates = disabledTemplates || {};
     (skills || []).forEach((skill, index) => {
       const label = clean(skill.label) || `Skill${index + 1}`;
       output.push(`***${label}：${clean(skill.name)}`);
@@ -217,11 +215,12 @@
         output.push(`***${label}[強化後]：${clean(skill.enhanced.name)}`);
         output.push(buildOwnedSkillTable(skill.enhanced));
         output.push('#endregion');
+      } else {
+        output.push(templates[label] || buildDisabledOwnedEnhancement(label));
       }
     });
     return output.join('\n');
   }
-
   function buildNobleTable(data) {
     if (clean(data.rawBlock)) return clean(data.rawBlock);
     const titleParts = [];
@@ -239,7 +238,6 @@
       `|${clean(data.rank)}|${clean(data.type) || '対宝具'}|${detail}${description ? `&br()${description}` : ''}|`
     ].join('\n');
   }
-
   function buildNoblePhantasms(noblePhantasms) {
     const output = [];
     (noblePhantasms || []).forEach((np) => {
@@ -254,7 +252,6 @@
     });
     return output.join('\n\n');
   }
-
   function buildWeapon(weapon) {
     if (clean(weapon.rawBlock)) return clean(weapon.rawBlock);
     return [
@@ -272,7 +269,31 @@
     report.replaced.push(label);
     return text.replace(pattern, replacement);
   }
-
+  function extractNumberedOwnedEnhancementTemplates(body) {
+    const lines = body.split('\n');
+    const kept = [];
+    const templates = {};
+    for (let index = 0; index < lines.length; index += 1) {
+      if (lines[index].trim() !== '//#region(close,強化後)') {
+        kept.push(lines[index]);
+        continue;
+      }
+      let end = index + 1;
+      let label = '';
+      while (end < lines.length && lines[end].trim() !== '//#endregion') {
+        const match = /^\/\/\*\*\*(Skill\d+)\[強化後\]：/.exec(lines[end].trim());
+        if (match) label = match[1];
+        end += 1;
+      }
+      if (label && end < lines.length) {
+        templates[label] = lines.slice(index, end + 1).join('\n');
+        index = end;
+        continue;
+      }
+      kept.push(lines[index]);
+    }
+    return { body: kept.join('\n'), templates };
+  }
   function isManagedSectionLine(heading, line) {
     const text = line.trim();
     if (!text || text.startsWith('//')) return false;
@@ -282,7 +303,6 @@
     if (heading === '宝具') return /^\*\*\*/.test(text) || /^#(?:region|endregion|br)\b/.test(text);
     return false;
   }
-
   function mergeSectionBody(originalBody, generatedBody, heading) {
     const lines = originalBody.split('\n');
     const kept = [];
@@ -299,7 +319,6 @@
     kept.splice(insertAt, 0, ...generated);
     return kept.join('\n');
   }
-
   function replaceSectionBody(text, heading, body, report) {
     const pattern = new RegExp(`^\\*\\*${escapeRegExp(heading)}[^\\n]*$`, 'm');
     const match = pattern.exec(text);
@@ -321,6 +340,29 @@
     report.replaced.push(`${heading}欄`);
     return `${text.slice(0, bodyStart)}${mergedBody}${text.slice(bodyEnd)}`;
   }
+  function replaceOwnedSkillsSection(text, skills, report) {
+    const pattern = /^\*\*保有スキル[^\n]*$/m;
+    const match = pattern.exec(text);
+    if (!match) {
+      report.missing.push('保有スキル欄');
+      return text;
+    }
+    const headingEnd = match.index + match[0].length;
+    const bodyStart = text[headingEnd] === '\n' ? headingEnd + 1 : headingEnd;
+    const remainder = text.slice(bodyStart);
+    const divider = /^\/\/─┤[^\n]*$/m.exec(remainder);
+    const nextHeading = /^\*\*[^*\n][^\n]*$/m.exec(remainder);
+    let relativeEnd = remainder.length;
+    if (divider) relativeEnd = Math.min(relativeEnd, divider.index);
+    if (nextHeading) relativeEnd = Math.min(relativeEnd, nextHeading.index);
+    const bodyEnd = bodyStart + relativeEnd;
+    const originalBody = text.slice(bodyStart, bodyEnd);
+    const extracted = extractNumberedOwnedEnhancementTemplates(originalBody);
+    const generatedBody = buildOwnedSkills(skills, extracted.templates);
+    const mergedBody = mergeSectionBody(extracted.body, generatedBody, '保有スキル');
+    report.replaced.push('保有スキル欄');
+    return `${text.slice(0, bodyStart)}${mergedBody}${text.slice(bodyEnd)}`;
+  }
 
   function buildFreshPage(state) {
     const basic = state.basic;
@@ -338,7 +380,7 @@
       '//─┤基本情報├──────────────────────────',
       '',
       '*基本情報',
-      '|BGCOLOR(#98fb98):CENTER:46|BGCOLOR(#87ceeb):CENTER:46|BGCOLOR(#ffb6c1):CENTER:46|BGCOLOR(#e6e6fa):CENTER:58|BGCOLOR(#f5fffa):CENTER:50|BGCOLOR(#f5fffa):CENTER:50|BGCOLOR(#e6e6fa):CENTER:20|BGCOLOR(#f5fffa):CENTER:50|BGCOLOR(#f5fffa):CENTER:50|BGCOLOR(#f5fffa):CENTER:50|BGCOLOR(#f5fffa):CENTER:50|BGCOLOR(#f5fffa):CENTER:100|BGCOLOR(#f5fffa):CENTER:50|BGCOLOR(#f5fffa):CENTER:50|BGCOLOR(#f5fffa):CENTER:100|c',
+      '|BGCOLOR(#98fb98):CENTER:46|BGCOLOR(#87ceeb):CENTER:46|BGCOLOR(#ffb6c1):CENTER:46|BGCOLOR(#e6e6fa):CENTER:58|BGCOLOR(#f5fffa):CENTER:50|BGCOLOR(#f5fffa):CENTER:50|BGCOLOR(#e6e6fa):CENTER:20|BGCOLOR(#f5fffa):CENTER:50|BGCOLOR(#f5fffa):CENTER:50|BGCOLOR(#e6e6fa):CENTER:20|BGCOLOR(#f5fffa):CENTER:50|BGCOLOR(#f5fffa):CENTER:100|BGCOLOR(#f5fffa):CENTER:50|BGCOLOR(#f5fffa):CENTER:50|BGCOLOR(#f5fffa):CENTER:100|c',
       `|>|>|>|>|>|>|>|>|>|>|>|>|>|>|BGCOLOR(#17184b):COLOR(white):No.${clean(basic.no)}|`,
       `|>|>|BGCOLOR(#e6e6fa):真名|>|>|>|>|>|>|>|>|>|>|>|${wikiTrueName(basic.trueName, basic.trueNameRawWiki)}|`,
       `|>|>|BGCOLOR(#e6e6fa):Class|>|>|&ref(${classIcon},icon/class,width=30)|>|BGCOLOR(#e6e6fa):性別|${clean(basic.gender)}|>|BGCOLOR(#e6e6fa):身長|${withUnit(basic.height, 'cm')}|>|BGCOLOR(#e6e6fa):体重|${withUnit(basic.weight, 'kg')}|`,
@@ -377,7 +419,6 @@
     if (!text.trim()) {
       return { text: buildFreshPage(state), report: { replaced: ['新規ページ全体'], missing: [] }, fresh: true };
     }
-
     const basic = state.basic;
     const params = state.parameters;
     const classIcon = getClassIcon(basic.className, basic.rarity);
@@ -390,7 +431,6 @@
     text = replaceLine(text, /^\|>\|>\|BGCOLOR\(#e6e6fa\):Class\|[^\n]*$/m,
       `|>|>|BGCOLOR(#e6e6fa):Class|>|>|&ref(${classIcon},icon/class,width=30)|>|BGCOLOR(#e6e6fa):性別|${clean(basic.gender)}|>|BGCOLOR(#e6e6fa):身長|${withUnit(basic.height, 'cm')}|>|BGCOLOR(#e6e6fa):体重|${withUnit(basic.weight, 'kg')}|`,
       'Class・性別・身長・体重', report);
-
     text = replaceLine(text, /^\|筋力\|[^\n]*\|耐久\|[^\n]*$/m,
       buildParameterRow('筋力', params.strength, ' ', '耐久', params.endurance), '筋力・耐久', report);
     text = replaceLine(text, /^\|敏捷\|[^\n]*\|魔力\|[^\n]*$/m,
@@ -399,20 +439,19 @@
       buildParameterRow('幸運', params.luck, '~', '宝具', params.noble), '幸運・宝具', report);
 
     text = replaceSectionBody(text, 'クラススキル', buildClassSkills(state.classGroups), report);
-    text = replaceSectionBody(text, '保有スキル', buildOwnedSkills(state.ownedSkills), report);
+    text = replaceOwnedSkillsSection(text, state.ownedSkills, report);
     text = replaceSectionBody(text, '宝具', buildNoblePhantasms(state.noblePhantasms), report);
     text = replaceSectionBody(text, '武器', buildWeapon(state.weapon), report);
-
     return { text, report, fresh: false };
   }
 
   const core = {
     VERSION, CLASS_DATA, RARITY_ICON_SUFFIX, NP_COLORS, SKILL_MASTER, SKILL_NOBLE_PREFIX,
-    defaultState, normalizeState, inferSkillIcon, classIconSuffix, getClassIcon, syncClassData, skillDescription, withUnit,
-    rankBars, buildParameterRow, buildClassSkillBlock, buildClassSkills, buildOwnedSkills, buildNoblePhantasms,
+    defaultState, normalizeState, inferSkillIcon, classIconSuffix, getClassIcon, syncClassData,
+    skillDescription, withUnit, rankBars, buildParameterRow,
+    buildClassSkillBlock, buildClassSkills, buildOwnedSkills, buildNoblePhantasms,
     buildWeapon, buildFreshPage, applyAll
   };
-
   if (typeof globalThis !== 'undefined') {
     globalThis.FGODataAutofillCore = core;
     globalThis.FGODataAutofillInternal = {
