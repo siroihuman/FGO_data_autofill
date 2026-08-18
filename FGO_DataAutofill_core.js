@@ -1,9 +1,9 @@
 (function () {
   'use strict';
 
-  const VERSION = '2.1.2';
+  const VERSION = '2.2.0';
   const ROOT_ID = 'fgo-data-autofill';
-  const STATE_KEY = 'fgo-data-autofill:v5:';
+  const STATE_KEY = 'fgo-data-autofill:v6:';
 
   const CLASS_DATA = {
     'セイバー': '剣', 'アーチャー': '弓', 'ランサー': '槍',
@@ -59,8 +59,25 @@
     return rawWiki ? text : text.replace(/\n/g, '&br()');
   }
   function skillDescription(data) {
-    const description = wikiText(data.description, data.rawWiki);
-    return data.isNoblePhantasm ? `${SKILL_NOBLE_PREFIX}${description}` : description;
+    return wikiText(data.description, data.rawWiki);
+  }
+  function hasNobleTemplate(value) {
+    const text = clean(value);
+    return text.startsWith(SKILL_NOBLE_PREFIX) || (
+      text.slice(0, 260).includes('種別：') &&
+      text.slice(0, 260).includes('レンジ：') &&
+      text.slice(0, 260).includes('最大補足：')
+    );
+  }
+  function toggleNobleTemplate(data, enabled) {
+    data.isNoblePhantasm = Boolean(enabled);
+    const description = String(data.description == null ? '' : data.description).replace(/\r\n?/g, '\n');
+    if (enabled) {
+      if (!hasNobleTemplate(description)) data.description = `${SKILL_NOBLE_PREFIX}${description}`;
+    } else if (description.startsWith(SKILL_NOBLE_PREFIX)) {
+      data.description = description.slice(SKILL_NOBLE_PREFIX.length);
+    }
+    return data;
   }
   function wikiTrueName(value, rawWiki) {
     const text = clean(value);
@@ -112,6 +129,9 @@
       enhanced: { heading: '', reading: '', name: '', rank: '', type: '対宝具', card: 'Buster', range: '', maxTargets: '', description: '', rawWiki: false, rawBlock: '' }
     }, data || {});
   }
+  function newBondCraftEssence(data) {
+    return Object.assign({ name: '', icon: '', description: '', rawWiki: false, rawBlock: '' }, data || {});
+  }
   function defaultState() {
     return {
       basic: {
@@ -122,6 +142,7 @@
       classGroups: [newClassGroup()],
       ownedSkills: [newOwnedSkill(0), newOwnedSkill(1), newOwnedSkill(2)],
       noblePhantasms: [newNoblePhantasm()],
+      bondCraftEssence: newBondCraftEssence(),
       weapon: { name: '', description: '', rawWiki: false, rawBlock: '' },
       sourceCode: '', outputCode: '', message: '', report: null
     };
@@ -154,6 +175,7 @@
           return normalized;
         })
       : [newNoblePhantasm()];
+    state.bondCraftEssence = Object.assign(newBondCraftEssence(), state.bondCraftEssence || {});
     state.weapon = Object.assign(defaults.weapon, state.weapon || {});
     state.basic.rarity = String(state.basic.rarity || '5');
     return syncClassData(state);
@@ -252,6 +274,21 @@
     });
     return output.join('\n\n');
   }
+  function buildBondCraftEssence(ce, basic) {
+    if (clean(ce.rawBlock)) return clean(ce.rawBlock);
+    const name = clean(ce.name);
+    const icon = ensurePng(ce.icon, name ? `${name}.png` : '0.png');
+    const className = clean(basic.className);
+    const classIcon = getClassIcon(className, basic.rarity);
+    return [
+      '|BGCOLOR(#e6e6fa):CENTER:45|BGCOLOR(#f5fffa):LEFT:1000|c',
+      `|&ref(${icon},icon/skill,height=48)|BGCOLOR(#e6e6fa):CENTER:&font(b,110%){${name}}&ref(${classIcon},icon/class,title=${className},height=25,width=25)|`,
+      `|~|${wikiText(ce.description, ce.rawWiki)}|`
+    ].join('\n');
+  }
+  function hasBondCraftEssenceData(ce) {
+    return Boolean(clean(ce.name) || clean(ce.icon) || clean(ce.description) || clean(ce.rawBlock));
+  }
   function buildWeapon(weapon) {
     if (clean(weapon.rawBlock)) return clean(weapon.rawBlock);
     return [
@@ -319,49 +356,54 @@
     kept.splice(insertAt, 0, ...generated);
     return kept.join('\n');
   }
-  function replaceSectionBody(text, heading, body, report) {
+  function sectionBounds(text, heading) {
     const pattern = new RegExp(`^\\*\\*${escapeRegExp(heading)}[^\\n]*$`, 'm');
     const match = pattern.exec(text);
-    if (!match) {
+    if (!match) return null;
+    const headingEnd = match.index + match[0].length;
+    const bodyStart = text[headingEnd] === '\n' ? headingEnd + 1 : headingEnd;
+    const remainder = text.slice(bodyStart);
+    const divider = /^\/\/─┤[^\n]*$/m.exec(remainder);
+    const nextHeading = /^\*\*[^*\n][^\n]*$/m.exec(remainder);
+    let relativeEnd = remainder.length;
+    if (divider) relativeEnd = Math.min(relativeEnd, divider.index);
+    if (nextHeading) relativeEnd = Math.min(relativeEnd, nextHeading.index);
+    return { bodyStart, bodyEnd: bodyStart + relativeEnd };
+  }
+  function replaceSectionBody(text, heading, body, report) {
+    const bounds = sectionBounds(text, heading);
+    if (!bounds) {
       report.missing.push(`${heading}欄`);
       return text;
     }
-    const headingEnd = match.index + match[0].length;
-    const bodyStart = text[headingEnd] === '\n' ? headingEnd + 1 : headingEnd;
-    const remainder = text.slice(bodyStart);
-    const divider = /^\/\/─┤[^\n]*$/m.exec(remainder);
-    const nextHeading = /^\*\*[^*\n][^\n]*$/m.exec(remainder);
-    let relativeEnd = remainder.length;
-    if (divider) relativeEnd = Math.min(relativeEnd, divider.index);
-    if (nextHeading) relativeEnd = Math.min(relativeEnd, nextHeading.index);
-    const bodyEnd = bodyStart + relativeEnd;
-    const originalBody = text.slice(bodyStart, bodyEnd);
+    const originalBody = text.slice(bounds.bodyStart, bounds.bodyEnd);
     const mergedBody = mergeSectionBody(originalBody, body, heading);
     report.replaced.push(`${heading}欄`);
-    return `${text.slice(0, bodyStart)}${mergedBody}${text.slice(bodyEnd)}`;
+    return `${text.slice(0, bounds.bodyStart)}${mergedBody}${text.slice(bounds.bodyEnd)}`;
   }
   function replaceOwnedSkillsSection(text, skills, report) {
-    const pattern = /^\*\*保有スキル[^\n]*$/m;
-    const match = pattern.exec(text);
-    if (!match) {
+    const bounds = sectionBounds(text, '保有スキル');
+    if (!bounds) {
       report.missing.push('保有スキル欄');
       return text;
     }
-    const headingEnd = match.index + match[0].length;
-    const bodyStart = text[headingEnd] === '\n' ? headingEnd + 1 : headingEnd;
-    const remainder = text.slice(bodyStart);
-    const divider = /^\/\/─┤[^\n]*$/m.exec(remainder);
-    const nextHeading = /^\*\*[^*\n][^\n]*$/m.exec(remainder);
-    let relativeEnd = remainder.length;
-    if (divider) relativeEnd = Math.min(relativeEnd, divider.index);
-    if (nextHeading) relativeEnd = Math.min(relativeEnd, nextHeading.index);
-    const bodyEnd = bodyStart + relativeEnd;
-    const originalBody = text.slice(bodyStart, bodyEnd);
+    const originalBody = text.slice(bounds.bodyStart, bounds.bodyEnd);
     const extracted = extractNumberedOwnedEnhancementTemplates(originalBody);
     const generatedBody = buildOwnedSkills(skills, extracted.templates);
     const mergedBody = mergeSectionBody(extracted.body, generatedBody, '保有スキル');
     report.replaced.push('保有スキル欄');
-    return `${text.slice(0, bodyStart)}${mergedBody}${text.slice(bodyEnd)}`;
+    return `${text.slice(0, bounds.bodyStart)}${mergedBody}${text.slice(bounds.bodyEnd)}`;
+  }
+  function replaceOrInsertBondSection(text, state, report) {
+    const body = buildBondCraftEssence(state.bondCraftEssence, state.basic);
+    if (sectionBounds(text, '絆礼装')) return replaceSectionBody(text, '絆礼装', body, report);
+    if (!hasBondCraftEssenceData(state.bondCraftEssence)) return text;
+    const divider = /^\/\/─┤武器├[^\n]*$/m.exec(text);
+    const weaponHeading = /^\*\*武器[^\n]*$/m.exec(text);
+    const insertAt = divider ? divider.index : (weaponHeading ? weaponHeading.index : text.length);
+    const block = `//─┤絆礼装├────────────────────────────\n\n**絆礼装\n${body}\n\n\n`;
+    report.replaced.push('絆礼装欄（新規追加）');
+    return `${text.slice(0, insertAt)}${block}${text.slice(insertAt)}`;
   }
 
   function buildFreshPage(state) {
@@ -405,6 +447,11 @@
       '**宝具',
       buildNoblePhantasms(state.noblePhantasms),
       '',
+      '//─┤絆礼装├────────────────────────────',
+      '',
+      '**絆礼装',
+      buildBondCraftEssence(state.bondCraftEssence, state.basic),
+      '',
       '//─┤武器├────────────────────────────',
       '',
       '**武器',
@@ -441,6 +488,7 @@
     text = replaceSectionBody(text, 'クラススキル', buildClassSkills(state.classGroups), report);
     text = replaceOwnedSkillsSection(text, state.ownedSkills, report);
     text = replaceSectionBody(text, '宝具', buildNoblePhantasms(state.noblePhantasms), report);
+    text = replaceOrInsertBondSection(text, state, report);
     text = replaceSectionBody(text, '武器', buildWeapon(state.weapon), report);
     return { text, report, fresh: false };
   }
@@ -448,15 +496,15 @@
   const core = {
     VERSION, CLASS_DATA, RARITY_ICON_SUFFIX, NP_COLORS, SKILL_MASTER, SKILL_NOBLE_PREFIX,
     defaultState, normalizeState, inferSkillIcon, classIconSuffix, getClassIcon, syncClassData,
-    skillDescription, withUnit, rankBars, buildParameterRow,
+    skillDescription, hasNobleTemplate, toggleNobleTemplate, withUnit, rankBars, buildParameterRow,
     buildClassSkillBlock, buildClassSkills, buildOwnedSkills, buildNoblePhantasms,
-    buildWeapon, buildFreshPage, applyAll
+    buildBondCraftEssence, hasBondCraftEssenceData, buildWeapon, buildFreshPage, applyAll
   };
   if (typeof globalThis !== 'undefined') {
     globalThis.FGODataAutofillCore = core;
     globalThis.FGODataAutofillInternal = {
       ROOT_ID, STATE_KEY, clean, clone, escapeHtml,
-      newClassSkill, newClassGroup, newOwnedSkill, newNoblePhantasm
+      newClassSkill, newClassGroup, newOwnedSkill, newNoblePhantasm, newBondCraftEssence
     };
   }
 })();
