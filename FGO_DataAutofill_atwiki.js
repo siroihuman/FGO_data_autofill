@@ -9,7 +9,7 @@
   files.forEach((file) => {
     sequence = sequence.then(() => new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = `${base}${file}?v=2.1.0`;
+      script.src = `${base}${file}?v=2.2.0`;
       script.onload = resolve;
       script.onerror = () => reject(new Error(`${file}の読み込みに失敗しました。`));
       document.head.appendChild(script);
