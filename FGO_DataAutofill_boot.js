@@ -40,12 +40,24 @@
     try {
       if (!window.name.startsWith(STATE_KEY)) return null;
       return normalizeState(JSON.parse(window.name.slice(STATE_KEY.length)));
-    } catch (_) { return null; }
+    } catch (_) {
+      return null;
+    }
+  }
+  function enforceEnhancementHierarchy(state, path, checked) {
+    if (!checked && /\.enhancedEnabled$/.test(path)) {
+      const base = path.replace(/\.enhancedEnabled$/, '');
+      if (getPath(state, `${base}.enhanced2Enabled`) !== undefined) setPath(state, `${base}.enhanced2Enabled`, false);
+    }
+    if (checked && /\.enhanced2Enabled$/.test(path)) {
+      const base = path.replace(/\.enhanced2Enabled$/, '');
+      setPath(state, `${base}.enhancedEnabled`, true);
+    }
   }
 
   function mount(root) {
     let state = loadState() || defaultState();
-    const refresh = () => render(root, state);
+    function refresh() { render(root, state); }
 
     root.addEventListener('input', (event) => {
       const element = event.target;
@@ -58,16 +70,17 @@
     root.addEventListener('change', (event) => {
       const element = event.target;
       if (element.dataset.nobleToggle) {
-        toggleNobleTemplate(getPath(state, element.dataset.nobleToggle), element.checked);
-        saveState(state);
-        refresh();
-        return;
+        const target = getPath(state, element.dataset.nobleToggle);
+        toggleNobleTemplate(target, element.checked);
+        saveState(state); refresh(); return;
       }
       if (element.dataset.path) {
-        setPath(state, element.dataset.path, element.type === 'checkbox' ? element.checked : element.value);
+        const value = element.type === 'checkbox' ? element.checked : element.value;
+        setPath(state, element.dataset.path, value);
         if (element.dataset.path === 'basic.rarity') syncClassData(state);
+        if (element.type === 'checkbox') enforceEnhancementHierarchy(state, element.dataset.path, element.checked);
         saveState(state);
-        if (element.dataset.path === 'basic.rarity' || (element.type === 'checkbox' && /enhancedEnabled$/.test(element.dataset.path))) refresh();
+        if (element.dataset.path === 'basic.rarity' || (element.type === 'checkbox' && /enhanced(?:2)?Enabled$/.test(element.dataset.path))) refresh();
         return;
       }
       if (element.hasAttribute('data-basic-class')) {
@@ -115,6 +128,7 @@
       else return;
       saveState(state); refresh();
     });
+
     refresh();
   }
 
@@ -130,6 +144,7 @@
     installStyle();
     mount(root);
   }
+
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
   else boot();
 })();
