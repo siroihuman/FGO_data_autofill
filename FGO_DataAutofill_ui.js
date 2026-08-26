@@ -52,9 +52,17 @@
     return html;
   }
 
+  function ownedEnhancementHtml(data, base, title) {
+    return `<details class="fda-details" open><summary>${title}</summary><div class="fda-grid">
+      ${field(`${title}スキル名`, input(`${base}.name`, data.name))}
+      ${field(`${title}アイコン`, input(`${base}.icon`, data.icon))}
+      ${field(`${title}解説`, textarea(`${base}.description`, data.description), true)}
+      ${field(`${title}特殊ブロック`, textarea(`${base}.rawBlock`, data.rawBlock), true)}
+    </div>${nobleCheckbox(base, data.isNoblePhantasm, `宝具情報テンプレートを${title}解説の先頭に挿入`)}${checkbox(`${base}.rawWiki`, data.rawWiki, `${title}解説をWiki記法のまま出力`)}</details>`;
+  }
+
   function ownedSkillHtml(skill, index) {
     const base = `ownedSkills.${index}`;
-    const e = skill.enhanced;
     return `<div class="fda-card"><div class="fda-head"><strong>保有スキル ${index + 1}</strong><button type="button" class="fda-btn danger" data-action="delete-owned-skill" data-index="${index}">削除</button></div><div class="fda-grid">
       ${field('見出し番号', input(`${base}.label`, skill.label))}
       ${field('スキル名', input(`${base}.name`, skill.name))}
@@ -63,23 +71,36 @@
       ${field('特殊ブロック直接指定', textarea(`${base}.rawBlock`, skill.rawBlock), true)}
     </div>${nobleCheckbox(base, skill.isNoblePhantasm, '宝具情報テンプレートを解説の先頭に挿入')}${checkbox(`${base}.rawWiki`, skill.rawWiki, '解説をWiki記法のまま出力')}
     ${checkbox(`${base}.enhancedEnabled`, skill.enhancedEnabled, '強化後データを出力')}
-    ${skill.enhancedEnabled ? `<details class="fda-details" open><summary>強化後</summary><div class="fda-grid">${field('強化後スキル名', input(`${base}.enhanced.name`, e.name))}${field('強化後アイコン', input(`${base}.enhanced.icon`, e.icon))}${field('強化後解説', textarea(`${base}.enhanced.description`, e.description), true)}${field('強化後特殊ブロック', textarea(`${base}.enhanced.rawBlock`, e.rawBlock), true)}</div>${nobleCheckbox(`${base}.enhanced`, e.isNoblePhantasm, '宝具情報テンプレートを強化後解説の先頭に挿入')}${checkbox(`${base}.enhanced.rawWiki`, e.rawWiki, '強化後解説をWiki記法のまま出力')}</details>` : ''}</div>`;
+    ${skill.enhancedEnabled ? ownedEnhancementHtml(skill.enhanced, `${base}.enhanced`, '強化後') : ''}
+    ${checkbox(`${base}.enhanced2Enabled`, skill.enhanced2Enabled, '強化2回目データを出力')}
+    ${skill.enhanced2Enabled ? ownedEnhancementHtml(skill.enhanced2, `${base}.enhanced2`, '強化2回目') : ''}
+    </div>`;
+  }
+
+  function nobleFields(data, prefix) {
+    return `<div class="fda-grid">
+      ${field('小見出し', input(`${prefix}.heading`, data.heading || '', '複数宝具時など'))}
+      ${field('宝具名の読み', input(`${prefix}.reading`, data.reading))}
+      ${field('宝具名', input(`${prefix}.name`, data.name))}
+      ${field('ランク', input(`${prefix}.rank`, data.rank))}
+      ${field('種別', input(`${prefix}.type`, data.type))}
+      ${field('カード色', `<select data-np-card="${prefix}">${Object.keys(NP_COLORS).map((card) => `<option value="${card}"${data.card === card ? ' selected' : ''}>${card}</option>`).join('')}</select>`)}
+      ${field('レンジ', input(`${prefix}.range`, data.range))}
+      ${field('最大捕捉', input(`${prefix}.maxTargets`, data.maxTargets))}
+      ${field('解説', textarea(`${prefix}.description`, data.description), true)}
+      ${field('宝具ブロック直接指定', textarea(`${prefix}.rawBlock`, data.rawBlock, '特殊構造はこちら'), true)}
+    </div>${checkbox(`${prefix}.rawWiki`, data.rawWiki, '解説をWiki記法のまま出力')}`;
   }
 
   function nobleHtml(np, index) {
-    const common = (base, prefix) => `<div class="fda-grid">
-      ${field('小見出し', input(`${prefix}.heading`, base.heading || '', '複数宝具時など'))}
-      ${field('宝具名の読み', input(`${prefix}.reading`, base.reading))}
-      ${field('宝具名', input(`${prefix}.name`, base.name))}
-      ${field('ランク', input(`${prefix}.rank`, base.rank))}
-      ${field('種別', input(`${prefix}.type`, base.type))}
-      ${field('カード色', `<select data-np-card="${prefix}">${Object.keys(NP_COLORS).map((card) => `<option value="${card}"${base.card === card ? ' selected' : ''}>${card}</option>`).join('')}</select>`)}
-      ${field('レンジ', input(`${prefix}.range`, base.range))}
-      ${field('最大補足', input(`${prefix}.maxTargets`, base.maxTargets))}
-      ${field('解説', textarea(`${prefix}.description`, base.description), true)}
-      ${field('宝具ブロック直接指定', textarea(`${prefix}.rawBlock`, base.rawBlock, '特殊構造はこちら'), true)}
-    </div>${checkbox(`${prefix}.rawWiki`, base.rawWiki, '解説をWiki記法のまま出力')}`;
-    return `<div class="fda-card"><div class="fda-head"><strong>宝具 ${index + 1}</strong><button type="button" class="fda-btn danger" data-action="delete-np" data-index="${index}">削除</button></div>${common(np, `noblePhantasms.${index}`)}${checkbox(`noblePhantasms.${index}.enhancedEnabled`, np.enhancedEnabled, '強化後宝具を出力')}${np.enhancedEnabled ? `<details class="fda-details" open><summary>強化後</summary>${common(np.enhanced, `noblePhantasms.${index}.enhanced`)}</details>` : ''}</div>`;
+    const base = `noblePhantasms.${index}`;
+    return `<div class="fda-card"><div class="fda-head"><strong>宝具 ${index + 1}</strong><button type="button" class="fda-btn danger" data-action="delete-np" data-index="${index}">削除</button></div>
+      ${nobleFields(np, base)}
+      ${checkbox(`${base}.enhancedEnabled`, np.enhancedEnabled, '強化後宝具を出力')}
+      ${np.enhancedEnabled ? `<details class="fda-details" open><summary>強化後</summary>${nobleFields(np.enhanced, `${base}.enhanced`)}</details>` : ''}
+      ${checkbox(`${base}.enhanced2Enabled`, np.enhanced2Enabled, '強化2回目宝具を出力')}
+      ${np.enhanced2Enabled ? `<details class="fda-details" open><summary>強化2回目</summary>${nobleFields(np.enhanced2, `${base}.enhanced2`)}</details>` : ''}
+    </div>`;
   }
 
   function bondCraftEssenceHtml(ce) {
