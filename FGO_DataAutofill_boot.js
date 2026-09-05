@@ -5,7 +5,7 @@
   const ui = globalThis.FGODataAutofillUI;
   if (!core || !internal || !ui) throw new Error('FGO Data Autofill modules are not loaded.');
   const { defaultState, normalizeState, applyAll, syncClassData, toggleNobleTemplate } = core;
-  const { ROOT_ID, STATE_KEY, clone, newClassSkill, newClassGroup, newOwnedSkill, newNoblePhantasm } = internal;
+  const { ROOT_ID, STATE_KEY, clone, newClassSkill, newClassGroup, newOwnedSkill, newNoblePhantasm, newWeapon } = internal;
   const { installStyle, render } = ui;
 
   function getPath(object, path) {
@@ -109,6 +109,8 @@
       else if (action === 'delete-owned-skill' && state.ownedSkills.length > 1) state.ownedSkills.splice(Number(button.dataset.index), 1);
       else if (action === 'add-np') state.noblePhantasms.push(newNoblePhantasm());
       else if (action === 'delete-np' && state.noblePhantasms.length > 1) state.noblePhantasms.splice(Number(button.dataset.index), 1);
+      else if (action === 'add-weapon') state.weapons.push(newWeapon());
+      else if (action === 'delete-weapon' && state.weapons.length > 1) state.weapons.splice(Number(button.dataset.index), 1);
       else if (action === 'apply') {
         syncClassData(state);
         const result = applyAll(state.sourceCode, state);
