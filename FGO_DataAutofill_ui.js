@@ -72,8 +72,8 @@
     </div>${nobleCheckbox(base, skill.isNoblePhantasm, '宝具情報テンプレートを解説の先頭に挿入')}${checkbox(`${base}.rawWiki`, skill.rawWiki, '解説をWiki記法のまま出力')}
     ${checkbox(`${base}.enhancedEnabled`, skill.enhancedEnabled, '強化後データを出力')}
     ${skill.enhancedEnabled ? ownedEnhancementHtml(skill.enhanced, `${base}.enhanced`, '強化後') : ''}
-    ${checkbox(`${base}.enhanced2Enabled`, skill.enhanced2Enabled, '強化2回目データを出力')}
-    ${skill.enhanced2Enabled ? ownedEnhancementHtml(skill.enhanced2, `${base}.enhanced2`, '強化2回目') : ''}
+    ${checkbox(`${base}.enhanced2Enabled`, skill.enhanced2Enabled, '強化後2データを出力')}
+    ${skill.enhanced2Enabled ? ownedEnhancementHtml(skill.enhanced2, `${base}.enhanced2`, '強化後2') : ''}
     </div>`;
   }
 
@@ -98,8 +98,8 @@
       ${nobleFields(np, base)}
       ${checkbox(`${base}.enhancedEnabled`, np.enhancedEnabled, '強化後宝具を出力')}
       ${np.enhancedEnabled ? `<details class="fda-details" open><summary>強化後</summary>${nobleFields(np.enhanced, `${base}.enhanced`)}</details>` : ''}
-      ${checkbox(`${base}.enhanced2Enabled`, np.enhanced2Enabled, '強化2回目宝具を出力')}
-      ${np.enhanced2Enabled ? `<details class="fda-details" open><summary>強化2回目</summary>${nobleFields(np.enhanced2, `${base}.enhanced2`)}</details>` : ''}
+      ${checkbox(`${base}.enhanced2Enabled`, np.enhanced2Enabled, '強化後2宝具を出力')}
+      ${np.enhanced2Enabled ? `<details class="fda-details" open><summary>強化後2</summary>${nobleFields(np.enhanced2, `${base}.enhanced2`)}</details>` : ''}
     </div>`;
   }
 
@@ -110,6 +110,15 @@
       ${field('フレーバーテキスト', textarea('bondCraftEssence.description', ce.description), true)}
       ${field('特殊ブロック直接指定', textarea('bondCraftEssence.rawBlock', ce.rawBlock, '入力時は通常項目より優先されます'), true)}
     </div>${checkbox('bondCraftEssence.rawWiki', ce.rawWiki, 'フレーバーテキストをWiki記法のまま出力')}</div>`;
+  }
+
+  function weaponHtml(weapon, index) {
+    const base = `weapons.${index}`;
+    return `<div class="fda-card"><div class="fda-head"><strong>武器 ${index + 1}</strong><button type="button" class="fda-btn danger" data-action="delete-weapon" data-index="${index}">削除</button></div><div class="fda-grid">
+      ${field('武器名', input(`${base}.name`, weapon.name))}
+      ${field('解説', textarea(`${base}.description`, weapon.description), true)}
+      ${field('武器ブロック直接指定', textarea(`${base}.rawBlock`, weapon.rawBlock, '入力時は通常項目より優先されます'), true)}
+    </div>${nobleCheckbox(base, weapon.isNoblePhantasm, '宝具情報テンプレートを解説の先頭に挿入')}${checkbox(`${base}.rawWiki`, weapon.rawWiki, '解説をWiki記法のまま出力')}</div>`;
   }
 
   function render(root, state) {
@@ -128,7 +137,7 @@
       <section class="fda-sec"><h3>保有スキル</h3>${state.ownedSkills.map(ownedSkillHtml).join('')}<button type="button" class="fda-btn sub" data-action="add-owned-skill">保有スキルを追加</button></section>
       <section class="fda-sec"><h3>宝具</h3>${state.noblePhantasms.map(nobleHtml).join('')}<button type="button" class="fda-btn sub" data-action="add-np">宝具を追加</button></section>
       <section class="fda-sec"><h3>絆礼装</h3>${bondCraftEssenceHtml(state.bondCraftEssence)}</section>
-      <section class="fda-sec"><h3>武器</h3><div class="fda-grid">${field('武器名', input('weapon.name', state.weapon.name))}${field('解説', textarea('weapon.description', state.weapon.description), true)}${field('武器ブロック直接指定', textarea('weapon.rawBlock', state.weapon.rawBlock), true)}</div>${checkbox('weapon.rawWiki', state.weapon.rawWiki, '解説をWiki記法のまま出力')}</section>
+      <section class="fda-sec"><h3>武器</h3>${state.weapons.map(weaponHtml).join('')}<button type="button" class="fda-btn sub" data-action="add-weapon">武器を追加</button></section>
       <section class="fda-sec"><h3>PukiWikiコード</h3><p class="fda-help">既存ページの編集コードを左欄へ貼り付けてください。自動入力対象外の記述は保持します。</p><div class="fda-split">
         <label class="fda-field"><span>元のコード</span><textarea class="fda-code" data-path="sourceCode">${escapeHtml(state.sourceCode)}</textarea></label>
         <label class="fda-field"><span>反映後のコード</span><textarea class="fda-code" readonly>${escapeHtml(state.outputCode)}</textarea></label>
