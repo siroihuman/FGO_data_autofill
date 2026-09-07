@@ -5,13 +5,32 @@
   const internal = globalThis.FGODataAutofillInternal;
   if (!core || !internal) throw new Error('FGO Data Autofill core is not loaded.');
 
-  const VERSION = '2.5.0';
+  const VERSION = '2.6.0';
   const clean = internal.clean;
   const NP_COLORS = core.NP_COLORS;
   const originalDefaultState = core.defaultState;
   const originalNormalizeState = core.normalizeState;
   const originalBuildFreshPage = core.buildFreshPage;
   const originalApplyAll = core.applyAll;
+
+  function blankSkillData(data) {
+    return Object.assign({
+      name: '', icon: '0.png', description: '', rawWiki: false, rawBlock: '', isNoblePhantasm: false
+    }, data || {});
+  }
+
+  function blankNpData(data) {
+    return Object.assign({
+      reading: '', name: '', rank: '', type: '対宝具', card: 'Buster',
+      range: '', maxTargets: '', description: '', rawWiki: false, rawBlock: ''
+    }, data || {});
+  }
+
+  function normalizeMode(value, hasLegacyNameChange) {
+    const mode = clean(value);
+    if (mode === 'nameOnly' || mode === 'full') return mode;
+    return hasLegacyNameChange ? 'nameOnly' : 'none';
+  }
 
   function skillAscensionNames(value) {
     const source = value && typeof value === 'object' ? value : {};
@@ -20,20 +39,59 @@
 
   function npAscensionNames(value) {
     const source = value && typeof value === 'object' ? value : {};
-    const normalizeStage = (stage) => {
-      const item = source[stage] && typeof source[stage] === 'object' ? source[stage] : {};
+    const stage = (key) => {
+      const item = source[key] && typeof source[key] === 'object' ? source[key] : {};
       return { reading: clean(item.reading), name: clean(item.name) };
     };
-    return { second: normalizeStage('second'), third: normalizeStage('third') };
+    return { second: stage('second'), third: stage('third') };
   }
 
-  function ensureSkillAscension(data) {
-    data.ascensionNames = skillAscensionNames(data.ascensionNames);
+  function normalizeSkillSpecial(value) {
+    const source = value && typeof value === 'object' ? value : {};
+    return {
+      enabled: Boolean(source.enabled),
+      condition: clean(source.condition),
+      heading: clean(source.heading),
+      data: blankSkillData(source.data)
+    };
+  }
+
+  function normalizeNpSpecial(value) {
+    const source = value && typeof value === 'object' ? value : {};
+    return {
+      enabled: Boolean(source.enabled),
+      condition: clean(source.condition),
+      heading: clean(source.heading),
+      data: blankNpData(source.data)
+    };
+  }
+
+  function ensureSkillVariantConfig(data) {
+    const names = skillAscensionNames(data.ascensionNames);
+    data.ascensionMode = normalizeMode(data.ascensionMode, Boolean(names.second || names.third));
+    data.ascensionNames = names;
+    const ascensionData = data.ascensionData && typeof data.ascensionData === 'object' ? data.ascensionData : {};
+    data.ascensionData = {
+      second: blankSkillData(ascensionData.second),
+      third: blankSkillData(ascensionData.third)
+    };
+    data.special = normalizeSkillSpecial(data.special);
     return data;
   }
 
-  function ensureNpAscension(data) {
-    data.ascensionNames = npAscensionNames(data.ascensionNames);
+  function ensureNpVariantConfig(data) {
+    const names = npAscensionNames(data.ascensionNames);
+    const hasLegacy = Boolean(
+      names.second.reading || names.second.name || names.third.reading || names.third.name
+    );
+    data.ascensionMode = normalizeMode(data.ascensionMode, hasLegacy);
+    data.ascensionNames = names;
+    const ascensionData = data.ascensionData && typeof data.ascensionData === 'object' ? data.ascensionData : {};
+    data.ascensionData = {
+      second: blankNpData(ascensionData.second),
+      third: blankNpData(ascensionData.third)
+    };
+    data.special = normalizeNpSpecial(data.special);
     return data;
   }
 
@@ -41,20 +99,20 @@
     const skills = Array.isArray(state.ownedSkills) ? state.ownedSkills.slice(0, 3) : [];
     while (skills.length < 3) skills.push(internal.newOwnedSkill(skills.length));
     state.ownedSkills = skills.map((skill, index) => {
-      skill.label = `Skill${index + 1}`;
-      ensureSkillAscension(skill);
-      ensureSkillAscension(skill.enhanced);
-      ensureSkillAscension(skill.enhanced2);
+      skill.label = clean(skill.label) || `Skill${index + 1}`;
+      ensureSkillVariantConfig(skill);
+      ensureSkillVariantConfig(skill.enhanced);
+      ensureSkillVariantConfig(skill.enhanced2);
       return skill;
     });
 
     const nps = Array.isArray(state.noblePhantasms) ? state.noblePhantasms.slice(0, 1) : [];
     while (nps.length < 1) nps.push(internal.newNoblePhantasm());
     state.noblePhantasms = nps.map((np) => {
-      np.heading = '';
-      ensureNpAscension(np);
-      ensureNpAscension(np.enhanced);
-      ensureNpAscension(np.enhanced2);
+      np.heading = clean(np.heading);
+      ensureNpVariantConfig(np);
+      ensureNpVariantConfig(np.enhanced);
+      ensureNpVariantConfig(np.enhanced2);
       return np;
     });
     return state;
@@ -86,9 +144,15 @@
     ].join('\n');
   }
 
+  function hasSkillData(data) {
+    if (!data) return false;
+    const icon = clean(data.icon);
+    return Boolean(clean(data.name) || clean(data.description) || clean(data.rawBlock) || (icon && icon !== '0.png'));
+  }
+
   function disabledSkillEnhancement(label, stage) {
     const title = stage === 2 ? '強化後2' : '強化後';
-    const table = skillTable({ name: '', icon: '0.png', description: '', rawWiki: false, rawBlock: '' });
+    const table = skillTable(blankSkillData());
     return [
       `//#region(close,${title})`,
       `//***${label}[${title}]：`,
@@ -97,17 +161,59 @@
     ].join('\n');
   }
 
-  function skillAscensionBlocks(label, data, headingSuffix) {
+  function skillHeadingToken(label, suffix) {
+    return suffix ? `${label}[${suffix}]` : label;
+  }
+
+  function stagedSkillHeading(label, stageTitle, suffix) {
+    const details = suffix ? `${stageTitle}・${suffix}` : stageTitle;
+    return `${label}[${details}]`;
+  }
+
+  function skillNameOnlyBlocks(label, data, suffix) {
     const names = skillAscensionNames(data.ascensionNames);
     const blocks = [];
-    [['second', '第二再臨後'], ['third', '第三再臨後']].forEach(([key, title]) => {
+    [['second', '第二再臨後'], ['third', '第三再臨後']].forEach(([key, regionTitle]) => {
       if (!names[key]) return;
-      blocks.push(`#region(close,${title})`);
-      blocks.push(`***${label}${headingSuffix}：${names[key]}`);
-      blocks.push(skillTable(data));
+      blocks.push(`#region(${regionTitle})`);
+      blocks.push(`***${skillHeadingToken(label, suffix)}：${names[key]}`);
       blocks.push('#endregion');
     });
     return blocks;
+  }
+
+  function skillSpecialBlocks(label, data, suffix) {
+    const special = normalizeSkillSpecial(data.special);
+    if (!special.enabled) return [];
+    const condition = special.condition || '特殊条件の場合';
+    const heading = special.heading || skillHeadingToken(label, suffix);
+    return [
+      `#region(close,${condition})`,
+      `***${heading}：${clean(special.data.name)}`,
+      skillTable(special.data),
+      '#endregion'
+    ];
+  }
+
+  function buildSkillVariant(label, data, suffix) {
+    const mode = normalizeMode(data.ascensionMode, false);
+    const output = [];
+    if (mode === 'full') {
+      output.push(`***${stagedSkillHeading(label, '第一再臨', suffix)}：${clean(data.name)}`);
+      output.push(skillTable(data));
+      [['second', '第二再臨'], ['third', '第三再臨']].forEach(([key, stageTitle]) => {
+        const stage = data.ascensionData && data.ascensionData[key];
+        if (!hasSkillData(stage)) return;
+        output.push(`***${stagedSkillHeading(label, stageTitle, suffix)}：${clean(stage.name)}`);
+        output.push(skillTable(stage));
+      });
+    } else {
+      output.push(`***${skillHeadingToken(label, suffix)}：${clean(data.name)}`);
+      if (mode === 'nameOnly') output.push(...skillNameOnlyBlocks(label, data, suffix));
+      output.push(skillTable(data));
+    }
+    output.push(...skillSpecialBlocks(label, data, suffix));
+    return output;
   }
 
   function extractOwnedTemplates(body) {
@@ -123,7 +229,7 @@
       let end = index + 1;
       let label = '';
       while (end < lines.length && lines[end].trim() !== '//#endregion') {
-        const heading = /^\/\/\*\*\*(Skill\d+)\[(強化後|強化後2)\]：/.exec(lines[end].trim());
+        const heading = /^\/\/\*\*\*([^\[]+)\[(強化後|強化後2)\]：/.exec(lines[end].trim());
         if (heading) label = heading[1];
         end += 1;
       }
@@ -141,16 +247,12 @@
   function buildOwnedSkills(skills, templates) {
     const output = [];
     skills.forEach((skill, index) => {
-      const label = `Skill${index + 1}`;
-      output.push(`***${label}：${clean(skill.name)}`);
-      output.push(skillTable(skill));
-      output.push(...skillAscensionBlocks(label, skill, ''));
+      const label = clean(skill.label) || `Skill${index + 1}`;
+      output.push(...buildSkillVariant(label, skill, ''));
 
       if (skill.enhancedEnabled) {
         output.push('#region(close,強化後)');
-        output.push(`***${label}[強化後]：${clean(skill.enhanced.name)}`);
-        output.push(skillTable(skill.enhanced));
-        output.push(...skillAscensionBlocks(label, skill.enhanced, '[強化後]'));
+        output.push(...buildSkillVariant(label, skill.enhanced, '強化後'));
         output.push('#endregion');
       } else {
         output.push(templates[`${label}:1`] || disabledSkillEnhancement(label, 1));
@@ -158,9 +260,7 @@
 
       if (skill.enhanced2Enabled) {
         output.push('#region(close,強化後2)');
-        output.push(`***${label}[強化後2]：${clean(skill.enhanced2.name)}`);
-        output.push(skillTable(skill.enhanced2));
-        output.push(...skillAscensionBlocks(label, skill.enhanced2, '[強化後2]'));
+        output.push(...buildSkillVariant(label, skill.enhanced2, '強化後2'));
         output.push('#endregion');
       } else {
         output.push(templates[`${label}:2`] || disabledSkillEnhancement(label, 2));
@@ -169,15 +269,17 @@
     return output.join('\n');
   }
 
-  function npTable(data, override) {
+  function npTable(data, overrideNames) {
     if (clean(data.rawBlock)) return clean(data.rawBlock);
-    const names = override || {};
+    const names = overrideNames || {};
     const reading = clean(names.reading) || clean(data.reading);
     const name = clean(names.name) || clean(data.name);
     const title = [reading, name].filter(Boolean).join('&br()');
     const color = NP_COLORS[data.card] || NP_COLORS.Buster;
     const detail = `&font(b,110%){レンジ：${clean(data.range)}　最大捕捉：${clean(data.maxTargets)}}`;
-    const description = clean(data.description) ? (data.rawWiki ? clean(data.description) : clean(data.description).replace(/\n/g, '&br()')) : '';
+    const description = clean(data.description)
+      ? (data.rawWiki ? clean(data.description) : clean(data.description).replace(/\n/g, '&br()'))
+      : '';
     return [
       '|BGCOLOR(#e6e6fa):CENTER:65|BGCOLOR(#e6e6fa):CENTER:85|BGCOLOR(#e6e6fa):CENTER:1000|c',
       `|>|>|~${title}|`,
@@ -187,33 +289,73 @@
     ].join('\n');
   }
 
-  function npAscensionBlocks(data) {
+  function hasNpData(data) {
+    if (!data) return false;
+    return Boolean(
+      clean(data.reading) || clean(data.name) || clean(data.rank) || clean(data.range) || clean(data.maxTargets) ||
+      clean(data.description) || clean(data.rawBlock) || (clean(data.type) && clean(data.type) !== '対宝具') ||
+      (clean(data.card) && clean(data.card) !== 'Buster')
+    );
+  }
+
+  function npNameOnlyBlocks(data) {
     const names = npAscensionNames(data.ascensionNames);
     const blocks = [];
     [['second', '第二再臨後'], ['third', '第三再臨後']].forEach(([key, title]) => {
       const stage = names[key];
       if (!stage.reading && !stage.name) return;
       blocks.push(`#region(close,${title})`);
+      blocks.push(`***${title}&nobold(){}`);
       blocks.push(npTable(data, stage));
       blocks.push('#endregion');
     });
     return blocks;
   }
 
+  function npSpecialBlocks(data) {
+    const special = normalizeNpSpecial(data.special);
+    if (!special.enabled) return [];
+    const condition = special.condition || '特殊条件の場合';
+    const output = [`#region(close,${condition})`];
+    if (special.heading) output.push(`***${special.heading}`);
+    output.push(npTable(special.data));
+    output.push('#endregion');
+    return output;
+  }
+
+  function buildNpVariant(data) {
+    const mode = normalizeMode(data.ascensionMode, false);
+    const output = [];
+    if (clean(data.heading)) output.push(`***${clean(data.heading)}`);
+    if (mode === 'full') {
+      output.push('***第一再臨&nobold(){}');
+      output.push(npTable(data));
+      [['second', '第二再臨'], ['third', '第三再臨']].forEach(([key, title]) => {
+        const stage = data.ascensionData && data.ascensionData[key];
+        if (!hasNpData(stage)) return;
+        output.push(`***${title}&nobold(){}`);
+        output.push(npTable(stage));
+      });
+    } else {
+      output.push(npTable(data));
+      if (mode === 'nameOnly') output.push(...npNameOnlyBlocks(data));
+    }
+    output.push(...npSpecialBlocks(data));
+    return output;
+  }
+
   function buildNoblePhantasm(np) {
-    const output = [npTable(np), ...npAscensionBlocks(np)];
+    const output = buildNpVariant(np);
     if (np.enhancedEnabled) {
       output.push('#region(close,強化後)');
       output.push('#br');
-      output.push(npTable(np.enhanced));
-      output.push(...npAscensionBlocks(np.enhanced));
+      output.push(...buildNpVariant(np.enhanced));
       output.push('#endregion');
     }
     if (np.enhanced2Enabled) {
       output.push('#region(close,強化後2)');
       output.push('#br');
-      output.push(npTable(np.enhanced2));
-      output.push(...npAscensionBlocks(np.enhanced2));
+      output.push(...buildNpVariant(np.enhanced2));
       output.push('#endregion');
     }
     return output.join('\n');
@@ -243,7 +385,7 @@
       let managed = false;
       if (text && !text.startsWith('//')) {
         if (text.startsWith('|')) managed = true;
-        else if (heading === '保有スキル') managed = /^\*\*\*Skill/.test(text) || /^#(?:region|endregion)\b/.test(text);
+        else if (heading === '保有スキル') managed = /^\*\*\*/.test(text) || /^#(?:region|endregion)\b/.test(text);
         else if (heading === '宝具') managed = /^\*\*\*/.test(text) || /^#(?:region|endregion|br)\b/.test(text);
       }
       if (managed) {
@@ -266,11 +408,10 @@
     return `${text.slice(0, bounds.bodyStart)}${merged}${text.slice(bounds.bodyEnd)}`;
   }
 
-  function applyAscensionOutput(text, state) {
-    const extracted = extractOwnedTemplates((() => {
-      const bounds = sectionBounds(text, '保有スキル');
-      return bounds ? text.slice(bounds.bodyStart, bounds.bodyEnd) : '';
-    })());
+  function applyVariantOutput(text, state) {
+    const bounds = sectionBounds(text, '保有スキル');
+    const body = bounds ? text.slice(bounds.bodyStart, bounds.bodyEnd) : '';
+    const extracted = extractOwnedTemplates(body);
     text = replaceSection(text, '保有スキル', buildOwnedSkills(state.ownedSkills, extracted.templates), () => extracted.body);
     text = replaceSection(text, '宝具', buildNoblePhantasm(state.noblePhantasms[0]));
     return text;
@@ -278,16 +419,18 @@
 
   core.buildFreshPage = function (rawState) {
     const state = core.normalizeState(rawState);
-    return applyAscensionOutput(originalBuildFreshPage(state), state);
+    return applyVariantOutput(originalBuildFreshPage(state), state);
   };
 
   core.applyAll = function (sourceCode, rawState) {
     const state = core.normalizeState(rawState);
     const result = originalApplyAll(sourceCode, state);
-    result.text = applyAscensionOutput(result.text, state);
+    result.text = applyVariantOutput(result.text, state);
     return result;
   };
 
   core.buildOwnedSkillsWithAscension = buildOwnedSkills;
   core.buildNoblePhantasmWithAscension = buildNoblePhantasm;
+  core.normalizeSkillSpecial = normalizeSkillSpecial;
+  core.normalizeNpSpecial = normalizeNpSpecial;
 })();
