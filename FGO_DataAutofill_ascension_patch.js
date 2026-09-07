@@ -5,7 +5,7 @@
   const internal = globalThis.FGODataAutofillInternal;
   if (!core || !internal) throw new Error('FGO Data Autofill core is not loaded.');
 
-  const VERSION = '2.6.0';
+  const VERSION = '2.6.1';
   const clean = internal.clean;
   const NP_COLORS = core.NP_COLORS;
   const originalDefaultState = core.defaultState;
@@ -51,7 +51,6 @@
     return {
       enabled: Boolean(source.enabled),
       condition: clean(source.condition),
-      heading: clean(source.heading),
       data: blankSkillData(source.data)
     };
   }
@@ -61,7 +60,6 @@
     return {
       enabled: Boolean(source.enabled),
       condition: clean(source.condition),
-      heading: clean(source.heading),
       data: blankNpData(source.data)
     };
   }
@@ -161,22 +159,31 @@
     ].join('\n');
   }
 
-  function skillHeadingToken(label, suffix) {
-    return suffix ? `${label}[${suffix}]` : label;
+  function conditionWithSuffix(condition, suffix) {
+    const base = clean(condition);
+    return suffix ? `${base}・${suffix}` : base;
   }
 
-  function stagedSkillHeading(label, stageTitle, suffix) {
-    const details = suffix ? `${stageTitle}・${suffix}` : stageTitle;
-    return `${label}[${details}]`;
+  function headingWithCondition(label, condition, suffix) {
+    return `${label}[${conditionWithSuffix(condition, suffix)}]`;
+  }
+
+  function groupedSkillNameChanges(data) {
+    const names = skillAscensionNames(data.ascensionNames);
+    if (names.second && names.third && names.second === names.third) {
+      return [{ condition: '第二・第三再臨時', name: names.second }];
+    }
+    const changes = [];
+    if (names.second) changes.push({ condition: '第二再臨時', name: names.second });
+    if (names.third) changes.push({ condition: '第三再臨時', name: names.third });
+    return changes;
   }
 
   function skillNameOnlyBlocks(label, data, suffix) {
-    const names = skillAscensionNames(data.ascensionNames);
     const blocks = [];
-    [['second', '第二再臨後'], ['third', '第三再臨後']].forEach(([key, regionTitle]) => {
-      if (!names[key]) return;
-      blocks.push(`#region(${regionTitle})`);
-      blocks.push(`***${skillHeadingToken(label, suffix)}：${names[key]}`);
+    groupedSkillNameChanges(data).forEach((change) => {
+      blocks.push(`#region(${change.condition})`);
+      blocks.push(`***${headingWithCondition(label, change.condition, suffix)}：${change.name}`);
       blocks.push('#endregion');
     });
     return blocks;
@@ -185,11 +192,10 @@
   function skillSpecialBlocks(label, data, suffix) {
     const special = normalizeSkillSpecial(data.special);
     if (!special.enabled) return [];
-    const condition = special.condition || '特殊条件の場合';
-    const heading = special.heading || skillHeadingToken(label, suffix);
+    const condition = special.condition || '特殊条件時';
     return [
       `#region(close,${condition})`,
-      `***${heading}：${clean(special.data.name)}`,
+      `***${headingWithCondition(label, condition, suffix)}：${clean(special.data.name)}`,
       skillTable(special.data),
       '#endregion'
     ];
@@ -199,16 +205,18 @@
     const mode = normalizeMode(data.ascensionMode, false);
     const output = [];
     if (mode === 'full') {
-      output.push(`***${stagedSkillHeading(label, '第一再臨', suffix)}：${clean(data.name)}`);
+      const firstCondition = '第一再臨時';
+      output.push(`***${headingWithCondition(label, firstCondition, suffix)}：${clean(data.name)}`);
       output.push(skillTable(data));
-      [['second', '第二再臨'], ['third', '第三再臨']].forEach(([key, stageTitle]) => {
+      [['second', '第二再臨時'], ['third', '第三再臨時']].forEach(([key, condition]) => {
         const stage = data.ascensionData && data.ascensionData[key];
         if (!hasSkillData(stage)) return;
-        output.push(`***${stagedSkillHeading(label, stageTitle, suffix)}：${clean(stage.name)}`);
+        output.push(`***${headingWithCondition(label, condition, suffix)}：${clean(stage.name)}`);
         output.push(skillTable(stage));
       });
     } else {
-      output.push(`***${skillHeadingToken(label, suffix)}：${clean(data.name)}`);
+      const baseHeading = suffix ? `${label}[${suffix}]` : label;
+      output.push(`***${baseHeading}：${clean(data.name)}`);
       if (mode === 'nameOnly') output.push(...skillNameOnlyBlocks(label, data, suffix));
       output.push(skillTable(data));
     }
@@ -298,64 +306,91 @@
     );
   }
 
-  function npNameOnlyBlocks(data) {
+  function sameNpNameChange(a, b) {
+    return Boolean(
+      (a.reading || a.name) &&
+      a.reading === b.reading &&
+      a.name === b.name
+    );
+  }
+
+  function groupedNpNameChanges(data) {
     const names = npAscensionNames(data.ascensionNames);
+    if (sameNpNameChange(names.second, names.third)) {
+      return [{ condition: '第二・第三再臨時', names: names.second }];
+    }
+    const changes = [];
+    if (names.second.reading || names.second.name) changes.push({ condition: '第二再臨時', names: names.second });
+    if (names.third.reading || names.third.name) changes.push({ condition: '第三再臨時', names: names.third });
+    return changes;
+  }
+
+  function npConditionHeading(baseHeading, condition, suffix) {
+    return `${baseHeading}[${conditionWithSuffix(condition, suffix)}]`;
+  }
+
+  function npNameOnlyBlocks(data, baseHeading, suffix) {
     const blocks = [];
-    [['second', '第二再臨後'], ['third', '第三再臨後']].forEach(([key, title]) => {
-      const stage = names[key];
-      if (!stage.reading && !stage.name) return;
-      blocks.push(`#region(close,${title})`);
-      blocks.push(`***${title}&nobold(){}`);
-      blocks.push(npTable(data, stage));
+    groupedNpNameChanges(data).forEach((change) => {
+      blocks.push(`#region(close,${change.condition})`);
+      blocks.push(`***${npConditionHeading(baseHeading, change.condition, suffix)}`);
+      blocks.push(npTable(data, change.names));
       blocks.push('#endregion');
     });
     return blocks;
   }
 
-  function npSpecialBlocks(data) {
+  function npSpecialBlocks(data, baseHeading, suffix) {
     const special = normalizeNpSpecial(data.special);
     if (!special.enabled) return [];
-    const condition = special.condition || '特殊条件の場合';
-    const output = [`#region(close,${condition})`];
-    if (special.heading) output.push(`***${special.heading}`);
-    output.push(npTable(special.data));
-    output.push('#endregion');
-    return output;
+    const condition = special.condition || '特殊条件時';
+    return [
+      `#region(close,${condition})`,
+      `***${npConditionHeading(baseHeading, condition, suffix)}`,
+      npTable(special.data),
+      '#endregion'
+    ];
   }
 
-  function buildNpVariant(data) {
+  function buildNpVariant(data, suffix, fallbackHeading) {
     const mode = normalizeMode(data.ascensionMode, false);
+    const baseHeading = clean(data.heading) || clean(fallbackHeading) || '宝具';
     const output = [];
-    if (clean(data.heading)) output.push(`***${clean(data.heading)}`);
     if (mode === 'full') {
-      output.push('***第一再臨&nobold(){}');
+      const firstCondition = '第一再臨時';
+      output.push(`***${npConditionHeading(baseHeading, firstCondition, suffix)}`);
       output.push(npTable(data));
-      [['second', '第二再臨'], ['third', '第三再臨']].forEach(([key, title]) => {
+      [['second', '第二再臨時'], ['third', '第三再臨時']].forEach(([key, condition]) => {
         const stage = data.ascensionData && data.ascensionData[key];
         if (!hasNpData(stage)) return;
-        output.push(`***${title}&nobold(){}`);
+        output.push(`***${npConditionHeading(baseHeading, condition, suffix)}`);
         output.push(npTable(stage));
       });
     } else {
+      if (clean(data.heading)) {
+        const normalHeading = suffix ? `${baseHeading}[${suffix}]` : baseHeading;
+        output.push(`***${normalHeading}`);
+      }
       output.push(npTable(data));
-      if (mode === 'nameOnly') output.push(...npNameOnlyBlocks(data));
+      if (mode === 'nameOnly') output.push(...npNameOnlyBlocks(data, baseHeading, suffix));
     }
-    output.push(...npSpecialBlocks(data));
+    output.push(...npSpecialBlocks(data, baseHeading, suffix));
     return output;
   }
 
   function buildNoblePhantasm(np) {
-    const output = buildNpVariant(np);
+    const baseHeading = clean(np.heading) || '宝具';
+    const output = buildNpVariant(np, '', baseHeading);
     if (np.enhancedEnabled) {
       output.push('#region(close,強化後)');
       output.push('#br');
-      output.push(...buildNpVariant(np.enhanced));
+      output.push(...buildNpVariant(np.enhanced, '強化後', baseHeading));
       output.push('#endregion');
     }
     if (np.enhanced2Enabled) {
       output.push('#region(close,強化後2)');
       output.push('#br');
-      output.push(...buildNpVariant(np.enhanced2));
+      output.push(...buildNpVariant(np.enhanced2, '強化後2', baseHeading));
       output.push('#endregion');
     }
     return output.join('\n');
