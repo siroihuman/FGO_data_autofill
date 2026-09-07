@@ -19,8 +19,8 @@
   function ascensionModeSelect(path, value) {
     const options = [
       ['none', 'なし'],
-      ['nameOnly', "名称のみ変化（No.044'形式）"],
-      ['full', '再臨段階ごとに別データ（No.034形式）']
+      ['nameOnly', '名称のみ変化'],
+      ['full', '再臨段階ごとに別データ']
     ];
     return `<select data-path="${path}">${options.map(([key, label]) => `<option value="${key}"${value === key ? ' selected' : ''}>${escapeHtml(label)}</option>`).join('')}</select>`;
   }
@@ -41,13 +41,13 @@
     if (mode === 'nameOnly') {
       const names = data.ascensionNames || { second: '', third: '' };
       detail = `<div class="fda-grid">
-        ${field('第二再臨後の名称', input(`${base}.ascensionNames.second`, names.second || ''))}
-        ${field('第三再臨後の名称', input(`${base}.ascensionNames.third`, names.third || ''))}
+        ${field('第二再臨時の名称', input(`${base}.ascensionNames.second`, names.second || ''))}
+        ${field('第三再臨時の名称', input(`${base}.ascensionNames.third`, names.third || ''))}
       </div>`;
     } else if (mode === 'full') {
       const asc = data.ascensionData || {};
-      detail = `<details class="fda-details" open><summary>第二再臨</summary>${skillDataFields(asc.second || {}, `${base}.ascensionData.second`, '第二再臨')}</details>
-        <details class="fda-details" open><summary>第三再臨</summary>${skillDataFields(asc.third || {}, `${base}.ascensionData.third`, '第三再臨')}</details>`;
+      detail = `<details class="fda-details" open><summary>第二再臨時</summary>${skillDataFields(asc.second || {}, `${base}.ascensionData.second`, '第二再臨時')}</details>
+        <details class="fda-details" open><summary>第三再臨時</summary>${skillDataFields(asc.third || {}, `${base}.ascensionData.third`, '第三再臨時')}</details>`;
     }
     return `<details class="fda-details"><summary>再臨差分</summary>
       <div class="fda-grid">${field('再臨差分の種類', ascensionModeSelect(`${base}.ascensionMode`, mode))}</div>${detail}
@@ -55,11 +55,10 @@
   }
 
   function skillSpecialSettings(data, base) {
-    const special = data.special || { enabled: false, condition: '', heading: '', data: {} };
-    return `${checkbox(`${base}.special.enabled`, special.enabled, "特殊入力を使用（No.024'形式）")}
+    const special = data.special || { enabled: false, condition: '', data: {} };
+    return `${checkbox(`${base}.special.enabled`, special.enabled, '特殊入力を使用')}
       ${special.enabled ? `<details class="fda-details" open><summary>特殊入力</summary><div class="fda-grid">
-        ${field('条件／region名', input(`${base}.special.condition`, special.condition, '例：オーボエの呪言状態の場合'))}
-        ${field('見出し', input(`${base}.special.heading`, special.heading, '空欄なら通常の見出しを使用'))}
+        ${field('条件', input(`${base}.special.condition`, special.condition))}
       </div>${skillDataFields(special.data || {}, `${base}.special.data`, '特殊')}</details>` : ''}`;
   }
 
@@ -109,15 +108,15 @@
       const second = names.second || {};
       const third = names.third || {};
       detail = `<div class="fda-grid">
-        ${field('第二再臨後の読み', input(`${base}.ascensionNames.second.reading`, second.reading || ''))}
-        ${field('第二再臨後の宝具名', input(`${base}.ascensionNames.second.name`, second.name || ''))}
-        ${field('第三再臨後の読み', input(`${base}.ascensionNames.third.reading`, third.reading || ''))}
-        ${field('第三再臨後の宝具名', input(`${base}.ascensionNames.third.name`, third.name || ''))}
+        ${field('第二再臨時の読み', input(`${base}.ascensionNames.second.reading`, second.reading || ''))}
+        ${field('第二再臨時の宝具名', input(`${base}.ascensionNames.second.name`, second.name || ''))}
+        ${field('第三再臨時の読み', input(`${base}.ascensionNames.third.reading`, third.reading || ''))}
+        ${field('第三再臨時の宝具名', input(`${base}.ascensionNames.third.name`, third.name || ''))}
       </div>`;
     } else if (mode === 'full') {
       const asc = data.ascensionData || {};
-      detail = `<details class="fda-details" open><summary>第二再臨</summary>${npCoreFields(asc.second || {}, `${base}.ascensionData.second`, false)}</details>
-        <details class="fda-details" open><summary>第三再臨</summary>${npCoreFields(asc.third || {}, `${base}.ascensionData.third`, false)}</details>`;
+      detail = `<details class="fda-details" open><summary>第二再臨時</summary>${npCoreFields(asc.second || {}, `${base}.ascensionData.second`, false)}</details>
+        <details class="fda-details" open><summary>第三再臨時</summary>${npCoreFields(asc.third || {}, `${base}.ascensionData.third`, false)}</details>`;
     }
     return `<details class="fda-details"><summary>再臨差分</summary>
       <div class="fda-grid">${field('再臨差分の種類', ascensionModeSelect(`${base}.ascensionMode`, mode))}</div>${detail}
@@ -125,11 +124,10 @@
   }
 
   function npSpecialSettings(data, base) {
-    const special = data.special || { enabled: false, condition: '', heading: '', data: {} };
-    return `${checkbox(`${base}.special.enabled`, special.enabled, "特殊入力を使用（No.024'形式）")}
+    const special = data.special || { enabled: false, condition: '', data: {} };
+    return `${checkbox(`${base}.special.enabled`, special.enabled, '特殊入力を使用')}
       ${special.enabled ? `<details class="fda-details" open><summary>特殊入力</summary><div class="fda-grid">
-        ${field('条件／region名', input(`${base}.special.condition`, special.condition, '例：オーボエの呪言状態の場合'))}
-        ${field('見出し', input(`${base}.special.heading`, special.heading, '任意'))}
+        ${field('条件', input(`${base}.special.condition`, special.condition))}
       </div>${npCoreFields(special.data || {}, `${base}.special.data`, false)}</details>` : ''}`;
   }
 
