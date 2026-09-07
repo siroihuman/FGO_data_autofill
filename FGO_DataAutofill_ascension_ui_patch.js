@@ -16,31 +16,69 @@
   const checkbox = (path, checked, label) => `<label class="fda-check"><input type="checkbox" data-path="${path}"${checked ? ' checked' : ''}>${escapeHtml(label)}</label>`;
   const nobleCheckbox = (basePath, checked, label) => `<label class="fda-check"><input type="checkbox" data-noble-toggle="${basePath}"${checked ? ' checked' : ''}>${escapeHtml(label)}</label>`;
 
-  function skillAscensionFields(data, base) {
-    const names = data.ascensionNames || { second: '', third: '' };
+  function ascensionModeSelect(path, value) {
+    const options = [
+      ['none', 'なし'],
+      ['nameOnly', "名称のみ変化（No.044'形式）"],
+      ['full', '再臨段階ごとに別データ（No.034形式）']
+    ];
+    return `<select data-path="${path}">${options.map(([key, label]) => `<option value="${key}"${value === key ? ' selected' : ''}>${escapeHtml(label)}</option>`).join('')}</select>`;
+  }
+
+  function skillDataFields(data, base, title) {
+    const prefix = title ? `${title}` : '';
     return `<div class="fda-grid">
-      ${field('第二再臨後の名称', input(`${base}.ascensionNames.second`, names.second || ''))}
-      ${field('第三再臨後の名称', input(`${base}.ascensionNames.third`, names.third || ''))}
-    </div>`;
+      ${field(`${prefix}スキル名`, input(`${base}.name`, data.name))}
+      ${field(`${prefix}アイコン`, input(`${base}.icon`, data.icon))}
+      ${field(`${prefix}解説`, textarea(`${base}.description`, data.description), true)}
+      ${field(`${prefix}特殊ブロック`, textarea(`${base}.rawBlock`, data.rawBlock), true)}
+    </div>${nobleCheckbox(base, data.isNoblePhantasm, `宝具情報テンプレートを${prefix}解説の先頭に挿入`)}${checkbox(`${base}.rawWiki`, data.rawWiki, `${prefix}解説をWiki記法のまま出力`)}`;
+  }
+
+  function skillAscensionSettings(data, base) {
+    const mode = data.ascensionMode || 'none';
+    let detail = '';
+    if (mode === 'nameOnly') {
+      const names = data.ascensionNames || { second: '', third: '' };
+      detail = `<div class="fda-grid">
+        ${field('第二再臨後の名称', input(`${base}.ascensionNames.second`, names.second || ''))}
+        ${field('第三再臨後の名称', input(`${base}.ascensionNames.third`, names.third || ''))}
+      </div>`;
+    } else if (mode === 'full') {
+      const asc = data.ascensionData || {};
+      detail = `<details class="fda-details" open><summary>第二再臨</summary>${skillDataFields(asc.second || {}, `${base}.ascensionData.second`, '第二再臨')}</details>
+        <details class="fda-details" open><summary>第三再臨</summary>${skillDataFields(asc.third || {}, `${base}.ascensionData.third`, '第三再臨')}</details>`;
+    }
+    return `<details class="fda-details"><summary>再臨差分</summary>
+      <div class="fda-grid">${field('再臨差分の種類', ascensionModeSelect(`${base}.ascensionMode`, mode))}</div>${detail}
+    </details>`;
+  }
+
+  function skillSpecialSettings(data, base) {
+    const special = data.special || { enabled: false, condition: '', heading: '', data: {} };
+    return `${checkbox(`${base}.special.enabled`, special.enabled, "特殊入力を使用（No.024'形式）")}
+      ${special.enabled ? `<details class="fda-details" open><summary>特殊入力</summary><div class="fda-grid">
+        ${field('条件／region名', input(`${base}.special.condition`, special.condition, '例：オーボエの呪言状態の場合'))}
+        ${field('見出し', input(`${base}.special.heading`, special.heading, '空欄なら通常の見出しを使用'))}
+      </div>${skillDataFields(special.data || {}, `${base}.special.data`, '特殊')}</details>` : ''}`;
   }
 
   function ownedVariantFields(data, base, title) {
-    return `<details class="fda-details" open><summary>${title}</summary><div class="fda-grid">
-      ${field(`${title}スキル名`, input(`${base}.name`, data.name))}
-      ${field(`${title}アイコン`, input(`${base}.icon`, data.icon))}
-      ${field(`${title}解説`, textarea(`${base}.description`, data.description), true)}
-      ${field(`${title}特殊ブロック`, textarea(`${base}.rawBlock`, data.rawBlock), true)}
-    </div>${skillAscensionFields(data, base)}${nobleCheckbox(base, data.isNoblePhantasm, `宝具情報テンプレートを${title}解説の先頭に挿入`)}${checkbox(`${base}.rawWiki`, data.rawWiki, `${title}解説をWiki記法のまま出力`)}</details>`;
+    return `<details class="fda-details" open><summary>${title}</summary>
+      ${skillDataFields(data, base, `${title}`)}
+      ${skillAscensionSettings(data, base)}
+      ${skillSpecialSettings(data, base)}
+    </details>`;
   }
 
   function ownedSkillHtml(skill, index) {
     const base = `ownedSkills.${index}`;
     return `<div class="fda-card"><div class="fda-head"><strong>保有スキル ${index + 1}</strong></div><div class="fda-grid">
-      ${field('スキル名', input(`${base}.name`, skill.name))}
-      ${field('アイコン', input(`${base}.icon`, skill.icon))}
-      ${field('解説', textarea(`${base}.description`, skill.description), true)}
-      ${field('特殊ブロック直接指定', textarea(`${base}.rawBlock`, skill.rawBlock), true)}
-    </div>${skillAscensionFields(skill, base)}${nobleCheckbox(base, skill.isNoblePhantasm, '宝具情報テンプレートを解説の先頭に挿入')}${checkbox(`${base}.rawWiki`, skill.rawWiki, '解説をWiki記法のまま出力')}
+      ${field('見出し', input(`${base}.label`, skill.label || `Skill${index + 1}`))}
+    </div>
+    ${skillDataFields(skill, base, '')}
+    ${skillAscensionSettings(skill, base)}
+    ${skillSpecialSettings(skill, base)}
     ${checkbox(`${base}.enhancedEnabled`, skill.enhancedEnabled, '強化後データを出力')}
     ${skill.enhancedEnabled ? ownedVariantFields(skill.enhanced, `${base}.enhanced`, '強化後') : ''}
     ${checkbox(`${base}.enhanced2Enabled`, skill.enhanced2Enabled, '強化後2データを出力')}
@@ -48,20 +86,9 @@
     </div>`;
   }
 
-  function npAscensionFields(data, base) {
-    const names = data.ascensionNames || {};
-    const second = names.second || {};
-    const third = names.third || {};
+  function npCoreFields(data, prefix, includeHeading) {
     return `<div class="fda-grid">
-      ${field('第二再臨後の読み', input(`${base}.ascensionNames.second.reading`, second.reading || ''))}
-      ${field('第二再臨後の宝具名', input(`${base}.ascensionNames.second.name`, second.name || ''))}
-      ${field('第三再臨後の読み', input(`${base}.ascensionNames.third.reading`, third.reading || ''))}
-      ${field('第三再臨後の宝具名', input(`${base}.ascensionNames.third.name`, third.name || ''))}
-    </div>`;
-  }
-
-  function nobleFields(data, prefix) {
-    return `<div class="fda-grid">
+      ${includeHeading ? field('見出し', input(`${prefix}.heading`, data.heading || '')) : ''}
       ${field('宝具名の読み', input(`${prefix}.reading`, data.reading))}
       ${field('宝具名', input(`${prefix}.name`, data.name))}
       ${field('ランク', input(`${prefix}.rank`, data.rank))}
@@ -71,17 +98,59 @@
       ${field('最大捕捉', input(`${prefix}.maxTargets`, data.maxTargets))}
       ${field('解説', textarea(`${prefix}.description`, data.description), true)}
       ${field('宝具ブロック直接指定', textarea(`${prefix}.rawBlock`, data.rawBlock, '特殊構造はこちら'), true)}
-    </div>${npAscensionFields(data, prefix)}${checkbox(`${prefix}.rawWiki`, data.rawWiki, '解説をWiki記法のまま出力')}`;
+    </div>${checkbox(`${prefix}.rawWiki`, data.rawWiki, '解説をWiki記法のまま出力')}`;
+  }
+
+  function npAscensionSettings(data, base) {
+    const mode = data.ascensionMode || 'none';
+    let detail = '';
+    if (mode === 'nameOnly') {
+      const names = data.ascensionNames || {};
+      const second = names.second || {};
+      const third = names.third || {};
+      detail = `<div class="fda-grid">
+        ${field('第二再臨後の読み', input(`${base}.ascensionNames.second.reading`, second.reading || ''))}
+        ${field('第二再臨後の宝具名', input(`${base}.ascensionNames.second.name`, second.name || ''))}
+        ${field('第三再臨後の読み', input(`${base}.ascensionNames.third.reading`, third.reading || ''))}
+        ${field('第三再臨後の宝具名', input(`${base}.ascensionNames.third.name`, third.name || ''))}
+      </div>`;
+    } else if (mode === 'full') {
+      const asc = data.ascensionData || {};
+      detail = `<details class="fda-details" open><summary>第二再臨</summary>${npCoreFields(asc.second || {}, `${base}.ascensionData.second`, false)}</details>
+        <details class="fda-details" open><summary>第三再臨</summary>${npCoreFields(asc.third || {}, `${base}.ascensionData.third`, false)}</details>`;
+    }
+    return `<details class="fda-details"><summary>再臨差分</summary>
+      <div class="fda-grid">${field('再臨差分の種類', ascensionModeSelect(`${base}.ascensionMode`, mode))}</div>${detail}
+    </details>`;
+  }
+
+  function npSpecialSettings(data, base) {
+    const special = data.special || { enabled: false, condition: '', heading: '', data: {} };
+    return `${checkbox(`${base}.special.enabled`, special.enabled, "特殊入力を使用（No.024'形式）")}
+      ${special.enabled ? `<details class="fda-details" open><summary>特殊入力</summary><div class="fda-grid">
+        ${field('条件／region名', input(`${base}.special.condition`, special.condition, '例：オーボエの呪言状態の場合'))}
+        ${field('見出し', input(`${base}.special.heading`, special.heading, '任意'))}
+      </div>${npCoreFields(special.data || {}, `${base}.special.data`, false)}</details>` : ''}`;
+  }
+
+  function nobleVariantFields(data, prefix, title) {
+    return `<details class="fda-details" open><summary>${title}</summary>
+      ${npCoreFields(data, prefix, true)}
+      ${npAscensionSettings(data, prefix)}
+      ${npSpecialSettings(data, prefix)}
+    </details>`;
   }
 
   function nobleHtml(np) {
     const base = 'noblePhantasms.0';
     return `<div class="fda-card"><div class="fda-head"><strong>宝具</strong></div>
-      ${nobleFields(np, base)}
+      ${npCoreFields(np, base, true)}
+      ${npAscensionSettings(np, base)}
+      ${npSpecialSettings(np, base)}
       ${checkbox(`${base}.enhancedEnabled`, np.enhancedEnabled, '強化後宝具を出力')}
-      ${np.enhancedEnabled ? `<details class="fda-details" open><summary>強化後</summary>${nobleFields(np.enhanced, `${base}.enhanced`)}</details>` : ''}
+      ${np.enhancedEnabled ? nobleVariantFields(np.enhanced, `${base}.enhanced`, '強化後') : ''}
       ${checkbox(`${base}.enhanced2Enabled`, np.enhanced2Enabled, '強化後2宝具を出力')}
-      ${np.enhanced2Enabled ? `<details class="fda-details" open><summary>強化後2</summary>${nobleFields(np.enhanced2, `${base}.enhanced2`)}</details>` : ''}
+      ${np.enhanced2Enabled ? nobleVariantFields(np.enhanced2, `${base}.enhanced2`, '強化後2') : ''}
     </div>`;
   }
 
