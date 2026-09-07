@@ -1,4 +1,4 @@
 *FGO データオートフィル
 
 &html(<div id="fgo-data-autofill"></div>)
-#include_js(https://cdn.jsdelivr.net/gh/siroihuman/FGO_data_autofill@45855bcaa53afc90a13ff522f7f194befcf40d7f/FGO_DataAutofill_atwiki.js)
+#include_js(https://cdn.jsdelivr.net/gh/siroihuman/FGO_data_autofill@fed584360470238ecfe1719bf04517783d155e13/FGO_DataAutofill_atwiki.js)
