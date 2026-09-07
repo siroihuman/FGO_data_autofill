@@ -54,6 +54,12 @@
       setPath(state, `${base}.enhancedEnabled`, true);
     }
   }
+  function shouldRefreshForPath(path, element) {
+    return path === 'basic.rarity'
+      || (element.type === 'checkbox' && /enhanced(?:2)?Enabled$/.test(path))
+      || /\.ascensionMode$/.test(path)
+      || /\.special\.enabled$/.test(path);
+  }
 
   function mount(root) {
     let state = loadState() || defaultState();
@@ -80,7 +86,7 @@
         if (element.dataset.path === 'basic.rarity') syncClassData(state);
         if (element.type === 'checkbox') enforceEnhancementHierarchy(state, element.dataset.path, element.checked);
         saveState(state);
-        if (element.dataset.path === 'basic.rarity' || (element.type === 'checkbox' && /enhanced(?:2)?Enabled$/.test(element.dataset.path))) refresh();
+        if (shouldRefreshForPath(element.dataset.path, element)) refresh();
         return;
       }
       if (element.hasAttribute('data-basic-class')) {
