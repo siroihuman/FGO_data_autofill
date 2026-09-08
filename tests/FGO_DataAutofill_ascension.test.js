@@ -4,12 +4,13 @@ global.__FGO_DATA_AUTOFILL_TEST__ = true;
 require('../FGO_DataAutofill_core.js');
 require('../FGO_DataAutofill_runtime_patch.js');
 require('../FGO_DataAutofill_ascension_patch.js');
+require('../FGO_DataAutofill_np_stage_guard.js');
 require('../FGO_DataAutofill_ui.js');
 require('../FGO_DataAutofill_ascension_ui_patch.js');
 
 const core = global.FGODataAutofillCore;
 const ui = global.FGODataAutofillUI;
-assert.strictEqual(core.VERSION, '2.6.1');
+assert.strictEqual(core.VERSION, '2.6.2');
 
 const state = core.defaultState();
 assert.strictEqual(state.ownedSkills.length, 3);
@@ -95,5 +96,31 @@ assert(noble.includes('#region(close,第二・第三再臨時)'));
 assert(noble.includes('***宝具[第二・第三再臨時]'));
 assert(noble.includes('ナグ／イェブ&br()冒瀆の双子'));
 assert(!noble.includes('強化2回目'));
+
+// Full NP ascension mode: blank second/third stages must not emit headings or tables.
+np.ascensionMode = 'full';
+np.ascensionNames.second = { reading: '', name: '' };
+np.ascensionNames.third = { reading: '', name: '' };
+np.ascensionData.second = {
+  reading: '', name: '', rank: '', type: '対人宝具', card: 'Arts',
+  range: '', maxTargets: '', description: '', rawWiki: false, rawBlock: ''
+};
+np.ascensionData.third = {
+  reading: '', name: '', rank: '', type: '対宝具', card: 'Buster',
+  range: '', maxTargets: '', description: '', rawWiki: false, rawBlock: ''
+};
+noble = core.buildNoblePhantasmWithAscension(np);
+assert(noble.includes('***宝具[第一再臨時]'));
+assert(!noble.includes('***宝具[第二再臨時]'));
+assert(!noble.includes('***宝具[第三再臨時]'));
+
+Object.assign(np.ascensionData.third, {
+  reading: '第三ルビ', name: '第三宝具', rank: 'A', description: '第三効果'
+});
+noble = core.buildNoblePhantasmWithAscension(np);
+assert(!noble.includes('***宝具[第二再臨時]'));
+assert(noble.includes('***宝具[第三再臨時]'));
+assert(noble.includes('第三ルビ&br()第三宝具'));
+assert(noble.includes('第三効果'));
 
 console.log('FGO_DataAutofill conditional heading tests passed');
