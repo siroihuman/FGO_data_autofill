@@ -32,6 +32,11 @@ assert(!root.innerHTML.includes('形式'));
 assert(!root.innerHTML.includes('例：'));
 assert(!root.innerHTML.includes('special.heading'));
 
+state.ownedSkills[0].ascensionMode = 'nameOnly';
+state.noblePhantasms[0].ascensionMode = 'full';
+ui.render(root, state);
+assert((root.innerHTML.match(/<details class="fda-details" open><summary>再臨差分<\/summary>/g) || []).length >= 2);
+
 state.ownedSkills[0].name = '魔女の棲む森 A';
 state.ownedSkills[0].description = '共通効果';
 state.ownedSkills[0].ascensionMode = 'nameOnly';
