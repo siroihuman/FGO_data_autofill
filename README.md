@@ -77,6 +77,8 @@ atwikiのPukiWikiライクモードで使用する、FGOサーヴァント用デ
 
 強化後では条件の後ろへ`・強化後`、強化後2では`・強化後2`を付与します。
 
+宝具でも第二・第三再臨のデータが未入力なら、その段階の見出し・宝具表を出力しません。カード色・種別の選択値だけが存在する場合も未入力として扱い、読み・宝具名・ランク・レンジ・最大捕捉・解説・特殊ブロックのいずれかが入力された段階だけを出力します。
+
 ## 特殊入力
 
 再臨差分では表現できない条件付き別データに使用します。保有スキル・宝具の通常／強化後／強化後2でそれぞれ使用できます。
@@ -114,7 +116,7 @@ atwikiのPukiWikiライクモードで使用する、FGOサーヴァント用デ
 *FGO データオートフィル
 
 &html(<div id="fgo-data-autofill"></div>)
-#include_js(https://cdn.jsdelivr.net/gh/siroihuman/FGO_data_autofill@fed584360470238ecfe1719bf04517783d155e13/FGO_DataAutofill_atwiki.js)
+#include_js(https://cdn.jsdelivr.net/gh/siroihuman/FGO_data_autofill@ff57b17ea0563ca4f941ab9e5159abd5fa83c76d/FGO_DataAutofill_atwiki.js)
 ```
 
 jsDelivrの`@main`キャッシュによる旧版表示を避けるため、確定コミットを直接指定しています。
@@ -127,6 +129,12 @@ node tests/FGO_DataAutofill_ascension.test.js
 ```
 
 ## 更新履歴
+
+### ver 2.6.2
+
+- 宝具の「再臨段階ごとに別データ」で、未入力の第二・第三再臨を見出し・表ごと出力しないよう修正
+- カード色・種別だけが存在する再臨別宝具は未入力として扱うよう空判定を強化
+- 未入力の第二・第三再臨が出力されない回帰テストを追加
 
 ### ver 2.6.1
 
