@@ -49,7 +49,7 @@
       detail = `<details class="fda-details" open><summary>第二再臨時</summary>${skillDataFields(asc.second || {}, `${base}.ascensionData.second`, '第二再臨時')}</details>
         <details class="fda-details" open><summary>第三再臨時</summary>${skillDataFields(asc.third || {}, `${base}.ascensionData.third`, '第三再臨時')}</details>`;
     }
-    return `<details class="fda-details"><summary>再臨差分</summary>
+    return `<details class="fda-details"${mode !== 'none' ? ' open' : ''}><summary>再臨差分</summary>
       <div class="fda-grid">${field('再臨差分の種類', ascensionModeSelect(`${base}.ascensionMode`, mode))}</div>${detail}
     </details>`;
   }
@@ -118,7 +118,7 @@
       detail = `<details class="fda-details" open><summary>第二再臨時</summary>${npCoreFields(asc.second || {}, `${base}.ascensionData.second`, false)}</details>
         <details class="fda-details" open><summary>第三再臨時</summary>${npCoreFields(asc.third || {}, `${base}.ascensionData.third`, false)}</details>`;
     }
-    return `<details class="fda-details"><summary>再臨差分</summary>
+    return `<details class="fda-details"${mode !== 'none' ? ' open' : ''}><summary>再臨差分</summary>
       <div class="fda-grid">${field('再臨差分の種類', ascensionModeSelect(`${base}.ascensionMode`, mode))}</div>${detail}
     </details>`;
   }
