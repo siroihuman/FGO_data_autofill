@@ -13,8 +13,9 @@ require('../FGO_DataAutofill_icon_picker_patch.js');
 
 const core = global.FGODataAutofillCore;
 const ui = global.FGODataAutofillUI;
-assert.strictEqual(core.VERSION, '2.6.4');
+assert.strictEqual(core.VERSION, '2.6.5');
 assert.strictEqual(ui.skillIconCatalogPageUrl, 'https://w.atwiki.jp/siroi_human/pages/20.html');
+assert.strictEqual(typeof ui.skillIconPopupHtml, 'function');
 
 const state = core.defaultState();
 state.classGroups[0].skills[0].icon = '対魔力.png';
@@ -33,14 +34,23 @@ assert(root.innerHTML.includes('data-skill-icon-picker-for="ownedSkills.0.icon"'
 assert(root.innerHTML.includes('data-skill-icon-picker-for="ownedSkills.0.ascensionData.second.icon"'));
 assert(root.innerHTML.includes('data-skill-icon-picker-for="ownedSkills.0.special.data.icon"'));
 assert(root.innerHTML.includes('type="hidden" data-path="ownedSkills.0.icon" value="攻撃力アップ.png"'));
-assert(root.innerHTML.includes('アイコン一覧から選択'));
-assert(root.innerHTML.includes('アイコン名を検索'));
+assert(root.innerHTML.includes('data-skill-icon-open'));
+assert(root.innerHTML.includes('アイコンを選択'));
+assert(!root.innerHTML.includes('data-skill-icon-catalog'));
+assert(!root.innerHTML.includes('アイコン名を検索'));
 assert(root.innerHTML.includes('data-path="bondCraftEssence.icon"'));
 assert(!root.innerHTML.includes('data-skill-icon-picker-for="bondCraftEssence.icon"'));
+
+const popup = ui.skillIconPopupHtml();
+assert(popup.includes('data-skill-icon-modal'));
+assert(popup.includes('role="dialog"'));
+assert(popup.includes('アイコン名を検索'));
+assert(popup.includes('data-skill-icon-catalog'));
+assert(popup.includes('data-skill-icon-close'));
 
 state.basic.gender = '性別不明';
 assert.strictEqual(core.normalizeState(state).basic.gender, '性別不明');
 const page = core.buildFreshPage(state);
 assert(page.includes(':性別|-|'));
 
-console.log('FGO_DataAutofill icon picker / unknown gender tests passed');
+console.log('FGO_DataAutofill icon popup / unknown gender tests passed');
