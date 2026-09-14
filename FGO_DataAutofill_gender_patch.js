@@ -5,7 +5,7 @@
   const internal = globalThis.FGODataAutofillInternal;
   if (!core || !internal) throw new Error('FGO Data Autofill core is not loaded.');
 
-  const VERSION = '2.6.4';
+  const VERSION = '2.6.5';
   const clone = internal.clone || ((value) => JSON.parse(JSON.stringify(value)));
   const clean = internal.clean;
   const originalApplyAll = core.applyAll;
