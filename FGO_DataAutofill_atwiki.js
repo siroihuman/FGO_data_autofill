@@ -4,15 +4,17 @@
   const current = document.currentScript;
   const source = current && current.src ? current.src : '';
   const base = source ? source.replace(/[^/?#]+(?:[?#].*)?$/, '') : '';
-  const VERSION = '2.6.3';
+  const VERSION = '2.6.4';
   const files = [
     'FGO_DataAutofill_core.js',
     'FGO_DataAutofill_runtime_patch.js',
     'FGO_DataAutofill_ascension_patch.js',
     'FGO_DataAutofill_np_stage_guard.js',
     'FGO_DataAutofill_ascension_span_patch.js',
+    'FGO_DataAutofill_gender_patch.js',
     'FGO_DataAutofill_ui.js',
     'FGO_DataAutofill_ascension_ui_patch.js',
+    'FGO_DataAutofill_icon_picker_patch.js',
     'FGO_DataAutofill_boot.js'
   ];
   let sequence = Promise.resolve();
