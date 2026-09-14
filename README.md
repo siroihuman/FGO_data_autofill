@@ -15,6 +15,10 @@ atwikiのPukiWikiライクモードで使用する、FGOサーヴァント用デ
 
 既存ページのコード全文を「元のコード」へ貼り付けると、自動入力対象だけを更新します。コメント、コメントアウト済みテンプレート、独自注記などの自動入力対象外記述は削除せず保持します。元コードが空欄の場合はページ全体を新規生成します。
 
+## 基本情報
+
+性別欄へ`性別不明`と入力した場合、入力値はそのまま保持し、Wiki出力時のみ`-`へ変換します。
+
 ## クラススキル
 
 クラススキルの仕様は変更していません。
@@ -22,6 +26,20 @@ atwikiのPukiWikiライクモードで使用する、FGOサーヴァント用デ
 - 形態・グループ追加：維持
 - グループ見出し：維持
 - クラススキル追加：維持
+
+## スキルアイコン
+
+クラススキル・保有スキル・強化後・強化後2・再臨差分・特殊入力のスキルアイコンは、ファイル名を直接入力する方式ではなく、`icon/skill`ページの画像一覧から選択します。
+
+- `https://w.atwiki.jp/siroi_human/pages/20.html` の一覧を読み込み
+- ページ上の区分に沿ってアイコンをカテゴリ表示
+- 画像をクリックするとそのファイル名を設定
+- アイコン名による検索に対応
+- 現在選択中のアイコン画像とファイル名を表示
+- 選択解除に対応
+- 既存保存データのアイコン名はそのまま維持
+
+絆礼装のアイコン欄は今回の変更対象外です。
 
 ## 保有スキル・宝具の固定枠と見出し
 
@@ -128,7 +146,7 @@ atwikiのPukiWikiライクモードで使用する、FGOサーヴァント用デ
 *FGO データオートフィル
 
 &html(<div id="fgo-data-autofill"></div>)
-#include_js(https://cdn.jsdelivr.net/gh/siroihuman/FGO_data_autofill@381e39900390ba703dee4c1da4a0e9d9ca028f7b/FGO_DataAutofill_atwiki.js)
+#include_js(https://cdn.jsdelivr.net/gh/siroihuman/FGO_data_autofill@c0fc51b0ac545633464e451cbb60ca1812c6bae2/FGO_DataAutofill_atwiki.js)
 ```
 
 jsDelivrの`@main`キャッシュによる旧版表示を避けるため、確定コミットを直接指定しています。
@@ -139,9 +157,20 @@ jsDelivrの`@main`キャッシュによる旧版表示を避けるため、確�
 node tests/FGO_DataAutofill.test.js
 node tests/FGO_DataAutofill_ascension.test.js
 node tests/FGO_DataAutofill_ascension_span.test.js
+node tests/FGO_DataAutofill_icon_picker.test.js
 ```
 
 ## 更新履歴
+
+### ver 2.6.4
+
+- スキルアイコンのファイル名直接入力を、`icon/skill`ページを利用した画像一覧選択へ変更
+- クラススキル・保有スキル・強化後・強化後2・再臨差分・特殊入力のアイコン選択に対応
+- アイコン一覧をカテゴリ別に表示
+- アイコン名検索、選択中プレビュー、選択解除を追加
+- 既存保存済みアイコン名との互換性を維持
+- `性別不明`は入力値を保持しつつWiki出力時のみ`-`へ変換
+- アイコン選択・性別不明出力の回帰テストを追加
 
 ### ver 2.6.3
 
