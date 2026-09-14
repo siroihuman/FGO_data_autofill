@@ -10,8 +10,8 @@ require('../FGO_DataAutofill_gender_patch.js');
 require('../FGO_DataAutofill_ui.js');
 require('../FGO_DataAutofill_ascension_ui_patch.js');
 require('../FGO_DataAutofill_icon_picker_patch.js');
-require('../FGO_DataAutofill_bond_icon_picker_patch.js');
 require('../FGO_DataAutofill_icon_refresh_patch.js');
+require('../FGO_DataAutofill_bond_icon_picker_patch.js');
 
 const core = global.FGODataAutofillCore;
 const ui = global.FGODataAutofillUI;
