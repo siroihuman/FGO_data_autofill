@@ -15,8 +15,8 @@
     'FGO_DataAutofill_ui.js',
     'FGO_DataAutofill_ascension_ui_patch.js',
     'FGO_DataAutofill_icon_picker_patch.js',
-    'FGO_DataAutofill_bond_icon_picker_patch.js',
     'FGO_DataAutofill_icon_refresh_patch.js',
+    'FGO_DataAutofill_bond_icon_picker_patch.js',
     'FGO_DataAutofill_boot.js'
   ];
   let sequence = Promise.resolve();
