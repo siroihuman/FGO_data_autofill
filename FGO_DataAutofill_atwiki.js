@@ -4,7 +4,7 @@
   const current = document.currentScript;
   const source = current && current.src ? current.src : '';
   const base = source ? source.replace(/[^/?#]+(?:[?#].*)?$/, '') : '';
-  const VERSION = '2.6.6';
+  const VERSION = '2.6.7';
   const files = [
     'FGO_DataAutofill_core.js',
     'FGO_DataAutofill_runtime_patch.js',
@@ -15,6 +15,7 @@
     'FGO_DataAutofill_ui.js',
     'FGO_DataAutofill_ascension_ui_patch.js',
     'FGO_DataAutofill_icon_picker_patch.js',
+    'FGO_DataAutofill_bond_icon_picker_patch.js',
     'FGO_DataAutofill_icon_refresh_patch.js',
     'FGO_DataAutofill_boot.js'
   ];
