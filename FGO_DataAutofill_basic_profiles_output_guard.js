@@ -5,7 +5,7 @@
   const internal = globalThis.FGODataAutofillInternal;
   if (!core || !internal) throw new Error('FGO Data Autofill core is not loaded.');
 
-  const VERSION = '2.6.12';
+  const VERSION = '2.6.13';
   const clean = internal.clean;
   const originalApplyAll = core.applyAll;
   const originalBuildFreshPage = core.buildFreshPage;
@@ -50,7 +50,10 @@
       if (index === 0) {
         return `|>|>|BGCOLOR(#e6e6fa):Class|>|>|&ref(${classIcon},icon/class,width=30)|>|BGCOLOR(#e6e6fa):性別|${gender}|>|BGCOLOR(#e6e6fa):身長|${height}|>|BGCOLOR(#e6e6fa):体重|${weight}|`;
       }
-      return `|~|~|~|~|~|~|~|~|${gender}|~|~|${height}|~|~|${weight}|`;
+      const inheritedGender = clean(profile.gender) ? gender : '~';
+      const inheritedHeight = clean(profile.height) ? height : '~';
+      const inheritedWeight = clean(profile.weight) ? weight : '~';
+      return `|~|~|~|~|~|~|~|~|${inheritedGender}|~|~|${inheritedHeight}|~|~|${inheritedWeight}|`;
     });
   }
 
