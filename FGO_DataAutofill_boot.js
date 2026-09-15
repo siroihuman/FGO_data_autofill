@@ -4,9 +4,9 @@
   const internal = globalThis.FGODataAutofillInternal;
   const ui = globalThis.FGODataAutofillUI;
   if (!core || !internal || !ui) throw new Error('FGO Data Autofill modules are not loaded.');
-  const { defaultState, normalizeState, applyAll, syncClassData, toggleNobleTemplate } = core;
+  const { syncClassData, toggleNobleTemplate } = core;
   const { ROOT_ID, STATE_KEY, clone, newClassSkill, newClassGroup, newOwnedSkill, newNoblePhantasm, newWeapon } = internal;
-  const { installStyle, render } = ui;
+  const { installStyle } = ui;
 
   function getPath(object, path) {
     return path.split('.').reduce((current, key) => current[key], object);
@@ -39,7 +39,7 @@
   function loadState() {
     try {
       if (!window.name.startsWith(STATE_KEY)) return null;
-      return normalizeState(JSON.parse(window.name.slice(STATE_KEY.length)));
+      return core.normalizeState(JSON.parse(window.name.slice(STATE_KEY.length)));
     } catch (_) {
       return null;
     }
@@ -62,8 +62,8 @@
   }
 
   function mount(root) {
-    let state = loadState() || defaultState();
-    function refresh() { render(root, state); }
+    let state = loadState() || core.defaultState();
+    function refresh() { ui.render(root, state); }
 
     root.addEventListener('input', (event) => {
       const element = event.target;
@@ -126,7 +126,7 @@
       else if (action === 'delete-weapon' && state.weapons.length > 1) state.weapons.splice(Number(button.dataset.index), 1);
       else if (action === 'apply') {
         syncClassData(state);
-        const result = applyAll(state.sourceCode, state);
+        const result = core.applyAll(state.sourceCode, state);
         state.outputCode = result.text;
         state.report = result.report;
         const replaced = result.report.replaced.length;
