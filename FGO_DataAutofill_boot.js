@@ -90,7 +90,7 @@
   }
   function forceBasicProfileRows(text, state) {
     const lines = String(text == null ? '' : text).split('\n');
-    const start = lines.findIndex((line) => /^\|>\|>\|>\|BGCOLOR\(#e6e6fa\):Class\|/.test(line));
+    const start = lines.findIndex((line) => /^\|>\|>\|BGCOLOR\(#e6e6fa\):Class\|/.test(line));
     if (start < 0) return text;
     let end = start + 1;
     while (end < lines.length && /^\|~\|~\|~\|~\|~\|~\|~\|~\|/.test(lines[end])) end += 1;
