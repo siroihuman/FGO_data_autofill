@@ -18,7 +18,7 @@ require('../FGO_DataAutofill_basic_profiles_dom_sync.js');
 
 const core = global.FGODataAutofillCore;
 const ui = global.FGODataAutofillUI;
-assert.strictEqual(core.VERSION, '2.6.12');
+assert.strictEqual(core.VERSION, '2.6.13');
 assert.strictEqual(ui.multipleBasicProfilesEnabled, true);
 assert.strictEqual(typeof core.forceBasicProfileRows, 'function');
 assert.strictEqual(typeof ui.syncBasicProfilesFromDom, 'function');
@@ -44,6 +44,25 @@ assert.deepStrictEqual(rows, [
   '|>|>|BGCOLOR(#e6e6fa):Class|>|>|&ref(騎金.png,icon/class,width=30)|>|BGCOLOR(#e6e6fa):性別|男性&footnote(デウカリオン)|>|BGCOLOR(#e6e6fa):身長|179cm&footnote(デウカリオン)|>|BGCOLOR(#e6e6fa):体重|73kg&footnote(デウカリオン)|',
   '|~|~|~|~|~|~|~|~|女性&footnote(ピュラ)|~|~|157cm&footnote(ピュラ)|~|~|45kg&footnote(ピュラ)|'
 ]);
+
+const blankAddedState = core.defaultState();
+Object.assign(blankAddedState.basic, { rarity: '4', className: 'ライダー' });
+blankAddedState.basic.profiles = [
+  { gender: '男性', height: '179', weight: '73', note: '' },
+  { gender: '', height: '', weight: '', note: '' }
+];
+const blankAddedRows = core.buildBasicProfileRows(core.normalizeState(blankAddedState).basic);
+assert.strictEqual(blankAddedRows[1], '|~|~|~|~|~|~|~|~|~|~|~|~|~|~|~|');
+assert(core.buildFreshPage(blankAddedState).includes(blankAddedRows[1]));
+
+const partialBlankState = core.defaultState();
+Object.assign(partialBlankState.basic, { rarity: '4', className: 'ライダー' });
+partialBlankState.basic.profiles = [
+  { gender: '男性', height: '179', weight: '73', note: 'デウカリオン' },
+  { gender: '女性', height: '', weight: '45', note: 'ピュラ' }
+];
+const partialBlankRows = core.buildBasicProfileRows(core.normalizeState(partialBlankState).basic);
+assert.strictEqual(partialBlankRows[1], '|~|~|~|~|~|~|~|~|女性&footnote(ピュラ)|~|~|~|~|~|45kg&footnote(ピュラ)|');
 
 let page = core.buildFreshPage(state);
 assert(page.includes(rows[0]));
@@ -103,4 +122,4 @@ const applied = core.applyAll(source, state).text;
 assert(applied.includes(rows[0]));
 assert(applied.includes('|~|~|~|~|~|~|~|~|-&footnote(ピュラ)|~|~|157cm&footnote(ピュラ)|~|~|45kg&footnote(ピュラ)|'));
 
-console.log('FGO_DataAutofill multiple basic profile / DOM sync / class-row matching tests passed');
+console.log('FGO_DataAutofill multiple basic profile / blank inheritance / DOM sync / class-row matching tests passed');
