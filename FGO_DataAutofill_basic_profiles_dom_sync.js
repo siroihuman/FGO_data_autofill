@@ -5,7 +5,7 @@
   const ui = globalThis.FGODataAutofillUI;
   if (!core || !ui) throw new Error('FGO Data Autofill modules are not loaded.');
 
-  const VERSION = '2.6.10';
+  const VERSION = '2.6.11';
 
   function blankProfile() {
     return { gender: '', height: '', weight: '', note: '' };
