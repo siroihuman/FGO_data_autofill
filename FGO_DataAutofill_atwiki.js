@@ -4,7 +4,7 @@
   const current = document.currentScript;
   const source = current && current.src ? current.src : '';
   const base = source ? source.replace(/[^/?#]+(?:[?#].*)?$/, '') : '';
-  const VERSION = '2.6.12';
+  const VERSION = '2.6.13';
   const files = [
     'FGO_DataAutofill_core.js',
     'FGO_DataAutofill_runtime_patch.js',
