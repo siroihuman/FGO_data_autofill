@@ -5,7 +5,7 @@
   const internal = globalThis.FGODataAutofillInternal;
   if (!core || !internal) throw new Error('FGO Data Autofill core is not loaded.');
 
-  const VERSION = '2.6.9';
+  const VERSION = '2.6.12';
   const clean = internal.clean;
   const originalApplyAll = core.applyAll;
   const originalBuildFreshPage = core.buildFreshPage;
@@ -57,7 +57,7 @@
   function forceProfileRows(text, rawState) {
     const rows = buildRows(rawState);
     const lines = String(text == null ? '' : text).split('\n');
-    const start = lines.findIndex((line) => /^\|>\|>\|>\|BGCOLOR\(#e6e6fa\):Class\|/.test(line));
+    const start = lines.findIndex((line) => /^\|>\|>\|BGCOLOR\(#e6e6fa\):Class\|/.test(line));
     if (start < 0) return text;
 
     let end = start + 1;
