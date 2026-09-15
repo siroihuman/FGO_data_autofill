@@ -17,7 +17,7 @@ require('../FGO_DataAutofill_basic_profiles_output_guard.js');
 
 const core = global.FGODataAutofillCore;
 const ui = global.FGODataAutofillUI;
-assert.strictEqual(core.VERSION, '2.6.9');
+assert.strictEqual(core.VERSION, '2.6.13');
 assert.strictEqual(ui.skillIconCatalogPageUrl, 'https://w.atwiki.jp/siroi_human/pages/20.html');
 assert.strictEqual(typeof ui.skillIconPopupHtml, 'function');
 assert.strictEqual(typeof ui.refreshSkillIconCatalog, 'function');
