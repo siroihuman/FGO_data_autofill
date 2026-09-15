@@ -12,10 +12,11 @@ require('../FGO_DataAutofill_ascension_ui_patch.js');
 require('../FGO_DataAutofill_icon_picker_patch.js');
 require('../FGO_DataAutofill_icon_refresh_patch.js');
 require('../FGO_DataAutofill_bond_icon_picker_patch.js');
+require('../FGO_DataAutofill_basic_profiles_patch.js');
 
 const core = global.FGODataAutofillCore;
 const ui = global.FGODataAutofillUI;
-assert.strictEqual(core.VERSION, '2.6.7');
+assert.strictEqual(core.VERSION, '2.6.8');
 assert.strictEqual(ui.skillIconCatalogPageUrl, 'https://w.atwiki.jp/siroi_human/pages/20.html');
 assert.strictEqual(typeof ui.skillIconPopupHtml, 'function');
 assert.strictEqual(typeof ui.refreshSkillIconCatalog, 'function');
@@ -57,7 +58,7 @@ assert(popup.includes('アイコン名を検索'));
 assert(popup.includes('data-skill-icon-catalog'));
 assert(popup.includes('data-skill-icon-close'));
 
-state.basic.gender = '性別不明';
+state.basic.profiles[0].gender = '性別不明';
 assert.strictEqual(core.normalizeState(state).basic.gender, '性別不明');
 const page = core.buildFreshPage(state);
 assert(page.includes(':性別|-|'));
