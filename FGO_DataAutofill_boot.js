@@ -125,6 +125,7 @@
       else if (action === 'add-weapon') state.weapons.push(newWeapon());
       else if (action === 'delete-weapon' && state.weapons.length > 1) state.weapons.splice(Number(button.dataset.index), 1);
       else if (action === 'apply') {
+        if (typeof ui.syncBasicProfilesFromDom === 'function') ui.syncBasicProfilesFromDom(root, state);
         syncClassData(state);
         const result = core.applyAll(state.sourceCode, state);
         state.outputCode = result.text;
