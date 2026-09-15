@@ -14,12 +14,14 @@ require('../FGO_DataAutofill_icon_refresh_patch.js');
 require('../FGO_DataAutofill_bond_icon_picker_patch.js');
 require('../FGO_DataAutofill_basic_profiles_patch.js');
 require('../FGO_DataAutofill_basic_profiles_output_guard.js');
+require('../FGO_DataAutofill_basic_profiles_dom_sync.js');
 
 const core = global.FGODataAutofillCore;
 const ui = global.FGODataAutofillUI;
-assert.strictEqual(core.VERSION, '2.6.9');
+assert.strictEqual(core.VERSION, '2.6.10');
 assert.strictEqual(ui.multipleBasicProfilesEnabled, true);
 assert.strictEqual(typeof core.forceBasicProfileRows, 'function');
+assert.strictEqual(typeof ui.syncBasicProfilesFromDom, 'function');
 
 const migrated = core.normalizeState({
   basic: {
@@ -52,6 +54,33 @@ const guarded = core.forceBasicProfileRows(oneRowOnly, state);
 assert(guarded.includes(rows[0]));
 assert(guarded.includes(rows[1]));
 
+const domState = core.defaultState();
+Object.assign(domState.basic, { rarity: '4', className: 'ライダー' });
+const domFields = [
+  ['basic.profiles.0.gender', '男性'],
+  ['basic.profiles.0.height', '179'],
+  ['basic.profiles.0.weight', '73'],
+  ['basic.profiles.0.note', 'デウカリオン'],
+  ['basic.profiles.1.gender', '女性'],
+  ['basic.profiles.1.height', '157'],
+  ['basic.profiles.1.weight', '45'],
+  ['basic.profiles.1.note', 'ピュラ']
+].map(([path, value]) => ({ dataset: { path }, value }));
+const fakeRoot = {
+  querySelectorAll(selector) {
+    assert.strictEqual(selector, '[data-path^="basic.profiles."]');
+    return domFields;
+  }
+};
+assert.strictEqual(ui.syncBasicProfilesFromDom(fakeRoot, domState), true);
+assert.deepStrictEqual(domState.basic.profiles, [
+  { gender: '男性', height: '179', weight: '73', note: 'デウカリオン' },
+  { gender: '女性', height: '157', weight: '45', note: 'ピュラ' }
+]);
+const domPage = core.buildFreshPage(domState);
+assert(domPage.includes(rows[0]));
+assert(domPage.includes(rows[1]));
+
 state.basic.profiles[1].gender = '性別不明';
 page = core.buildFreshPage(state);
 assert(page.includes('|~|~|~|~|~|~|~|~|-&footnote(ピュラ)|~|~|157cm&footnote(ピュラ)|~|~|45kg&footnote(ピュラ)|'));
@@ -73,4 +102,4 @@ const applied = core.applyAll(source, state).text;
 assert(applied.includes(rows[0]));
 assert(applied.includes('|~|~|~|~|~|~|~|~|-&footnote(ピュラ)|~|~|157cm&footnote(ピュラ)|~|~|45kg&footnote(ピュラ)|'));
 
-console.log('FGO_DataAutofill multiple basic profile output guard tests passed');
+console.log('FGO_DataAutofill multiple basic profile / DOM sync tests passed');
