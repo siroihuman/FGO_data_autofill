@@ -5,7 +5,7 @@
   const ui = globalThis.FGODataAutofillUI;
   if (!core || !internal || !ui) throw new Error('FGO Data Autofill modules are not loaded.');
   const { syncClassData, toggleNobleTemplate } = core;
-  const { ROOT_ID, STATE_KEY, clone, newClassSkill, newClassGroup, newOwnedSkill, newNoblePhantasm, newWeapon } = internal;
+  const { ROOT_ID, STATE_KEY, clone, clean, newClassSkill, newClassGroup, newOwnedSkill, newNoblePhantasm, newWeapon } = internal;
   const { installStyle } = ui;
 
   function getPath(object, path) {
@@ -59,6 +59,43 @@
       || (element.type === 'checkbox' && /enhanced(?:2)?Enabled$/.test(path))
       || /\.ascensionMode$/.test(path)
       || /\.special\.enabled$/.test(path);
+  }
+
+  function outputGender(value) {
+    const text = clean(value);
+    return text === '性別不明' ? '-' : text;
+  }
+  function withFootnote(value, note) {
+    const text = String(value == null ? '' : value);
+    const annotation = clean(note);
+    return annotation && text ? `${text}&footnote(${annotation})` : text;
+  }
+  function buildBasicProfileRows(state) {
+    const basic = state && state.basic ? state.basic : {};
+    const profiles = Array.isArray(basic.profiles) && basic.profiles.length
+      ? basic.profiles
+      : [{ gender: basic.gender || '', height: basic.height || '', weight: basic.weight || '', note: '' }];
+    const classIcon = core.getClassIcon(basic.className, basic.rarity);
+    return profiles.map((profile, index) => {
+      const gender = withFootnote(outputGender(profile.gender), profile.note);
+      const heightValue = clean(profile.height) ? core.withUnit(profile.height, 'cm') : '';
+      const weightValue = clean(profile.weight) ? core.withUnit(profile.weight, 'kg') : '';
+      const height = withFootnote(heightValue, profile.note);
+      const weight = withFootnote(weightValue, profile.note);
+      if (index === 0) {
+        return `|>|>|BGCOLOR(#e6e6fa):Class|>|>|&ref(${classIcon},icon/class,width=30)|>|BGCOLOR(#e6e6fa):性別|${gender}|>|BGCOLOR(#e6e6fa):身長|${height}|>|BGCOLOR(#e6e6fa):体重|${weight}|`;
+      }
+      return `|~|~|~|~|~|~|~|~|${gender}|~|~|${height}|~|~|${weight}|`;
+    });
+  }
+  function forceBasicProfileRows(text, state) {
+    const lines = String(text == null ? '' : text).split('\n');
+    const start = lines.findIndex((line) => /^\|>\|>\|>\|BGCOLOR\(#e6e6fa\):Class\|/.test(line));
+    if (start < 0) return text;
+    let end = start + 1;
+    while (end < lines.length && /^\|~\|~\|~\|~\|~\|~\|~\|~\|/.test(lines[end])) end += 1;
+    lines.splice(start, end - start, ...buildBasicProfileRows(state));
+    return lines.join('\n');
   }
 
   function mount(root) {
@@ -128,6 +165,7 @@
         if (typeof ui.syncBasicProfilesFromDom === 'function') ui.syncBasicProfilesFromDom(root, state);
         syncClassData(state);
         const result = core.applyAll(state.sourceCode, state);
+        result.text = forceBasicProfileRows(result.text, state);
         state.outputCode = result.text;
         state.report = result.report;
         const replaced = result.report.replaced.length;
