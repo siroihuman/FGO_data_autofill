@@ -6,7 +6,7 @@
   const internal = globalThis.FGODataAutofillInternal;
   if (!core || !ui || !internal) throw new Error('FGO Data Autofill modules are not loaded.');
 
-  const VERSION = '2.6.8';
+  const VERSION = '2.6.12';
   const clean = internal.clean;
   const escapeHtml = internal.escapeHtml;
   const originalDefaultState = core.defaultState;
@@ -78,7 +78,7 @@
 
   function replaceProfileRows(text, basic) {
     const lines = String(text == null ? '' : text).split('\n');
-    const index = lines.findIndex((line) => /^\|>\|>\|>\|BGCOLOR\(#e6e6fa\):Class\|/.test(line));
+    const index = lines.findIndex((line) => /^\|>\|>\|BGCOLOR\(#e6e6fa\):Class\|/.test(line));
     if (index < 0) return text;
     let end = index + 1;
     while (end < lines.length && /^\|~\|~\|~\|~\|~\|~\|~\|~\|/.test(lines[end])) end += 1;
