@@ -104,7 +104,14 @@
       const button = event.target.closest('[data-action]');
       if (!button) return;
       const action = button.dataset.action;
-      if (action === 'add-class-group') { state.classGroups.push(newClassGroup()); syncClassData(state); }
+      if (action === 'add-basic-profile') {
+        if (!Array.isArray(state.basic.profiles)) state.basic.profiles = [];
+        state.basic.profiles.push({ gender: '', height: '', weight: '', note: '' });
+      }
+      else if (action === 'delete-basic-profile' && Array.isArray(state.basic.profiles) && state.basic.profiles.length > 1) {
+        state.basic.profiles.splice(Number(button.dataset.index), 1);
+      }
+      else if (action === 'add-class-group') { state.classGroups.push(newClassGroup()); syncClassData(state); }
       else if (action === 'delete-class-group' && state.classGroups.length > 1) state.classGroups.splice(Number(button.dataset.group), 1);
       else if (action === 'add-class-skill') state.classGroups[Number(button.dataset.group)].skills.push(newClassSkill());
       else if (action === 'delete-class-skill') {
