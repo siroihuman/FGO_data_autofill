@@ -18,7 +18,7 @@ require('../FGO_DataAutofill_basic_profiles_dom_sync.js');
 
 const core = global.FGODataAutofillCore;
 const ui = global.FGODataAutofillUI;
-assert.strictEqual(core.VERSION, '2.6.10');
+assert.strictEqual(core.VERSION, '2.6.12');
 assert.strictEqual(ui.multipleBasicProfilesEnabled, true);
 assert.strictEqual(typeof core.forceBasicProfileRows, 'function');
 assert.strictEqual(typeof ui.syncBasicProfilesFromDom, 'function');
@@ -98,8 +98,9 @@ const single = core.defaultState();
 Object.assign(single.basic, { rarity: '4', className: 'ライダー' });
 single.basic.profiles[0] = { gender: '男性', height: '179', weight: '73', note: '' };
 const source = core.buildFreshPage(single);
+assert(source.includes('|>|>|BGCOLOR(#e6e6fa):Class|'));
 const applied = core.applyAll(source, state).text;
 assert(applied.includes(rows[0]));
 assert(applied.includes('|~|~|~|~|~|~|~|~|-&footnote(ピュラ)|~|~|157cm&footnote(ピュラ)|~|~|45kg&footnote(ピュラ)|'));
 
-console.log('FGO_DataAutofill multiple basic profile / DOM sync tests passed');
+console.log('FGO_DataAutofill multiple basic profile / DOM sync / class-row matching tests passed');
