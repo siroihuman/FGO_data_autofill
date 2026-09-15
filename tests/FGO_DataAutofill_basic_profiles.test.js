@@ -13,11 +13,13 @@ require('../FGO_DataAutofill_icon_picker_patch.js');
 require('../FGO_DataAutofill_icon_refresh_patch.js');
 require('../FGO_DataAutofill_bond_icon_picker_patch.js');
 require('../FGO_DataAutofill_basic_profiles_patch.js');
+require('../FGO_DataAutofill_basic_profiles_output_guard.js');
 
 const core = global.FGODataAutofillCore;
 const ui = global.FGODataAutofillUI;
-assert.strictEqual(core.VERSION, '2.6.8');
+assert.strictEqual(core.VERSION, '2.6.9');
 assert.strictEqual(ui.multipleBasicProfilesEnabled, true);
+assert.strictEqual(typeof core.forceBasicProfileRows, 'function');
 
 const migrated = core.normalizeState({
   basic: {
@@ -45,6 +47,11 @@ let page = core.buildFreshPage(state);
 assert(page.includes(rows[0]));
 assert(page.includes(rows[1]));
 
+const oneRowOnly = page.split('\n').filter((line) => !/^\|~\|~\|~\|~\|~\|~\|~\|~\|/.test(line)).join('\n');
+const guarded = core.forceBasicProfileRows(oneRowOnly, state);
+assert(guarded.includes(rows[0]));
+assert(guarded.includes(rows[1]));
+
 state.basic.profiles[1].gender = '性別不明';
 page = core.buildFreshPage(state);
 assert(page.includes('|~|~|~|~|~|~|~|~|-&footnote(ピュラ)|~|~|157cm&footnote(ピュラ)|~|~|45kg&footnote(ピュラ)|'));
@@ -66,4 +73,4 @@ const applied = core.applyAll(source, state).text;
 assert(applied.includes(rows[0]));
 assert(applied.includes('|~|~|~|~|~|~|~|~|-&footnote(ピュラ)|~|~|157cm&footnote(ピュラ)|~|~|45kg&footnote(ピュラ)|'));
 
-console.log('FGO_DataAutofill multiple basic profile tests passed');
+console.log('FGO_DataAutofill multiple basic profile output guard tests passed');
