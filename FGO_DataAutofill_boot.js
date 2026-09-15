@@ -85,7 +85,10 @@
       if (index === 0) {
         return `|>|>|BGCOLOR(#e6e6fa):Class|>|>|&ref(${classIcon},icon/class,width=30)|>|BGCOLOR(#e6e6fa):性別|${gender}|>|BGCOLOR(#e6e6fa):身長|${height}|>|BGCOLOR(#e6e6fa):体重|${weight}|`;
       }
-      return `|~|~|~|~|~|~|~|~|${gender}|~|~|${height}|~|~|${weight}|`;
+      const inheritedGender = clean(profile.gender) ? gender : '~';
+      const inheritedHeight = clean(profile.height) ? height : '~';
+      const inheritedWeight = clean(profile.weight) ? weight : '~';
+      return `|~|~|~|~|~|~|~|~|${inheritedGender}|~|~|${inheritedHeight}|~|~|${inheritedWeight}|`;
     });
   }
   function forceBasicProfileRows(text, state) {
