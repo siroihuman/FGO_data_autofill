@@ -15,13 +15,19 @@ require('../FGO_DataAutofill_bond_icon_picker_patch.js');
 require('../FGO_DataAutofill_basic_profiles_patch.js');
 require('../FGO_DataAutofill_basic_profiles_output_guard.js');
 require('../FGO_DataAutofill_basic_profiles_dom_sync.js');
+require('../FGO_DataAutofill_true_name_patch.js');
+require('../FGO_DataAutofill_page_template_patch.js');
 
 const core = global.FGODataAutofillCore;
 const ui = global.FGODataAutofillUI;
-assert.strictEqual(core.VERSION, '2.6.13');
+assert.strictEqual(core.VERSION, '2.6.14');
 assert.strictEqual(ui.multipleBasicProfilesEnabled, true);
 assert.strictEqual(typeof core.forceBasicProfileRows, 'function');
 assert.strictEqual(typeof ui.syncBasicProfilesFromDom, 'function');
+assert.strictEqual(typeof core.formatRevealedTrueName, 'function');
+assert.strictEqual(typeof core.PAGE_TEMPLATE, 'string');
+assert(core.PAGE_TEMPLATE.includes('////真名隠し状態の宝具が作中にある場合はコメントアウトを外す'));
+assert(!core.PAGE_TEMPLATE.includes('//#region(close,真名)'));
 
 const migrated = core.normalizeState({
   basic: {
@@ -104,8 +110,36 @@ state.basic.profiles[1].gender = '性別不明';
 page = core.buildFreshPage(state);
 assert(page.includes('|~|~|~|~|~|~|~|~|-&footnote(ピュラ)|~|~|157cm&footnote(ピュラ)|~|~|45kg&footnote(ピュラ)|'));
 
+const revealedState = core.defaultState();
+Object.assign(revealedState.basic, {
+  no: '114',
+  trueName: '夢見のフォーリナー',
+  trueNameRevealed: 'ウルタールの猫／ハワード・フィリップス・ラヴクラフト',
+  rarity: '5',
+  className: 'フォーリナー'
+});
+const revealedTrueNameRow = '|>|>|BGCOLOR(#e6e6fa):真名|>|>|>|>|>|>|>|>|>|>|>|[[夢見のフォーリナー]]|';
+const revealedRow = '|>|>|BGCOLOR(#e6e6fa):真名判明|>|>|>|>|>|>|>|>|>|>|>|[[ウルタールの猫／ハワード・フィリップス・ラヴクラフト>夢見のフォーリナー]]|';
+const revealedClassRow = '|>|>|BGCOLOR(#e6e6fa):Class|>|>|&ref(降金.png,icon/class,width=30)|';
+const revealedFresh = core.applyAll('', revealedState).text;
+assert(revealedFresh.includes(revealedTrueNameRow));
+assert(revealedFresh.includes(revealedRow));
+assert(revealedFresh.indexOf(revealedTrueNameRow) < revealedFresh.indexOf(revealedRow));
+assert(revealedFresh.indexOf(revealedRow) < revealedFresh.indexOf(revealedClassRow));
+assert(!revealedFresh.includes('//#region(close,真名)'));
+assert.strictEqual(
+  core.formatRevealedTrueName({ trueName: '夢見のフォーリナー', trueNameRevealed: '[[別名>任意ページ]]' }),
+  '[[別名>任意ページ]]'
+);
+
+revealedState.basic.trueNameRevealed = '';
+const revealRemoved = core.applyAll(revealedFresh, revealedState).text;
+assert(!revealRemoved.includes('BGCOLOR(#e6e6fa):真名判明|'));
+
 const root = { innerHTML: '' };
 ui.render(root, state);
+assert(root.innerHTML.includes('data-path="basic.trueNameRevealed"'));
+assert(root.innerHTML.includes('<span>真名判明</span>'));
 assert(root.innerHTML.includes('data-path="basic.profiles.0.gender"'));
 assert(root.innerHTML.includes('data-path="basic.profiles.0.note"'));
 assert(root.innerHTML.includes('data-path="basic.profiles.1.gender"'));
