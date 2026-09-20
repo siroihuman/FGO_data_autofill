@@ -5,7 +5,7 @@
   const internal = globalThis.FGODataAutofillInternal;
   if (!core || !internal) throw new Error('FGO Data Autofill core is not loaded.');
 
-  const VERSION = '2.6.13';
+  const VERSION = '2.6.14';
   const clean = internal.clean;
   const originalApplyAll = core.applyAll;
   const originalBuildFreshPage = core.buildFreshPage;
