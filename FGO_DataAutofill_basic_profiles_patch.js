@@ -6,7 +6,7 @@
   const internal = globalThis.FGODataAutofillInternal;
   if (!core || !ui || !internal) throw new Error('FGO Data Autofill modules are not loaded.');
 
-  const VERSION = '2.6.13';
+  const VERSION = '2.6.14';
   const clean = internal.clean;
   const escapeHtml = internal.escapeHtml;
   const originalDefaultState = core.defaultState;
@@ -28,6 +28,7 @@
   function ensureProfiles(state) {
     if (!state || !state.basic) return state;
     const basic = state.basic;
+    basic.trueNameRevealed = basic.trueNameRevealed == null ? '' : String(basic.trueNameRevealed);
     let profiles = Array.isArray(basic.profiles) ? basic.profiles.map(blankProfile) : [];
     if (!profiles.length) {
       profiles = [blankProfile({ gender: basic.gender, height: basic.height, weight: basic.weight })];
@@ -127,7 +128,7 @@
     const basic = state.basic;
     const profiles = basic.profiles || [blankProfile()];
     return `<section class="fda-sec"><h3>No・基本情報</h3><div class="fda-grid">
-      ${field('No.', input('basic.no', basic.no))}${field('真名', input('basic.trueName', basic.trueName))}
+      ${field('No.', input('basic.no', basic.no))}${field('真名', input('basic.trueName', basic.trueName))}${field('真名判明', input('basic.trueNameRevealed', basic.trueNameRevealed))}
       ${field('レアリティ', `<select data-path="basic.rarity">${rarityOptions(basic.rarity)}</select>`)}${field('クラス', `<select data-basic-class>${classOptions(basic.className)}</select>`)}
     </div>${checkbox('basic.trueNameRawWiki', basic.trueNameRawWiki, '真名をWiki記法のまま出力')}
     ${profiles.map((profile, index) => profileEditor(profile, index, profiles.length)).join('')}
